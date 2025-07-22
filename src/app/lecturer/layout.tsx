@@ -105,7 +105,21 @@ export default function LecturerLayout({
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/50 px-6 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h2 className="text-lg font-semibold">Lecturer Panel</h2>
+             <div className="hidden items-center gap-2 md:flex">
+              <svg
+                className="size-6 text-primary"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+              </svg>
+              <h1 className="font-headline text-lg font-semibold">SyllaPlan</h1>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
