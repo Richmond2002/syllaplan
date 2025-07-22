@@ -8,9 +8,8 @@ import {
   ClipboardCheck,
   HelpCircle,
   GraduationCap,
-  PanelLeft,
-  LogOut,
   Calendar,
+  UserCircle,
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
@@ -24,14 +23,20 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter,
   SidebarTrigger,
   SidebarInset,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { href: "/student", icon: LayoutDashboard, label: "Dashboard" },
@@ -95,20 +100,35 @@ export default function StudentLayout({
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter>
-          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
-            <LogOut />
-            Log out
-          </Button>
-        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-background/50 px-6 backdrop-blur-sm">
-          <SidebarTrigger className="md:hidden" />
-          <div className="flex-1">
+        <header className="flex h-14 items-center justify-between gap-4 border-b bg-background/50 px-6 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="md:hidden" />
             <h2 className="text-lg font-semibold">Student Portal</h2>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="overflow-hidden rounded-full"
+                >
+                  <UserCircle />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>
