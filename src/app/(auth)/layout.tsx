@@ -22,7 +22,9 @@ export default function AuthLayout({
         </svg>
         <h1 className="font-headline text-2xl font-semibold">CourseForge</h1>
       </Link>
-      {children}
+      <div className="w-full max-w-sm">
+        {children}
+      </div>
     </div>
   );
 }
