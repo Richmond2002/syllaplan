@@ -10,6 +10,7 @@ import {
   GraduationCap,
   PanelLeft,
   LogOut,
+  Calendar,
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
@@ -37,6 +38,7 @@ const navItems = [
   { href: "/student/assignments", icon: ClipboardCheck, label: "Assignments" },
   { href: "/student/quizzes", icon: HelpCircle, label: "Quizzes" },
   { href: "/student/grades", icon: GraduationCap, label: "Grades" },
+  { href: "/student/schedule", icon: Calendar, label: "Schedule" },
 ];
 
 export default function StudentLayout({
