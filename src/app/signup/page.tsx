@@ -41,9 +41,13 @@ export default function SignupPage() {
       }
     } catch (error: any) {
       console.error(error);
+      let description = "An unexpected error occurred. Please try again.";
+      if (error.code === "auth/email-already-in-use") {
+        description = "This email address is already in use by another account.";
+      }
       toast({
         title: "Signup Failed",
-        description: error.message,
+        description: description,
         variant: "destructive",
       });
     } finally {
