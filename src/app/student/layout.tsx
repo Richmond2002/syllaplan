@@ -70,7 +70,6 @@ export default function StudentLayout({
         <div className="flex min-h-screen flex-col">
             <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
-                    <SidebarTrigger className="md:hidden" />
                     <Link href="/" className="flex items-center gap-2 font-bold">
                     <svg
                         className="size-6 text-primary"
@@ -129,9 +128,10 @@ export default function StudentLayout({
                         </SidebarMenu>
                     </SidebarContent>
                 </Sidebar>
-                <SidebarInset>
-                    <main className="flex-1 overflow-auto p-6">{children}</main>
-                </SidebarInset>
+                <div className="relative flex flex-1 flex-col overflow-auto">
+                    <SidebarTrigger className="md:hidden" />
+                    <main className="flex-1 p-6">{children}</main>
+                </div>
             </div>
         </div>
     </SidebarProvider>
