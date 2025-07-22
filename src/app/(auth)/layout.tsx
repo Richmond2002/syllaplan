@@ -6,9 +6,14 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
+      <div className="absolute top-4 left-4">
+        <Link href="/" className="text-sm text-primary hover:underline">
+          &larr; Back to Home
+        </Link>
+      </div>
       <div className="w-full max-w-sm">
-      <div className="flex justify-center mb-8">
+        <div className="mb-8 flex justify-center">
           <Link href="/" className="flex items-center gap-2 font-bold">
             <svg
               className="size-8 text-primary"
