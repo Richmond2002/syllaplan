@@ -24,7 +24,7 @@ export default function SignupPage() {
   };
 
   return (
-    <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full max-w-sm">
+    <Tabs defaultValue="student" value={role} onValueChange={setRole}>
         <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="student">Student</TabsTrigger>
             <TabsTrigger value="lecturer">Lecturer</TabsTrigger>
