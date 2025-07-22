@@ -109,25 +109,25 @@ export default function LecturerLayout({
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-            <Sidebar>
-                <SidebarContent>
-                    <SidebarMenu>
-                        {navItems.map((item) => (
-                        <SidebarMenuItem key={item.href}>
-                            <SidebarMenuButton tooltip={item.tooltip} asChild>
-                            <Link href={item.href}>
-                                <item.icon />
-                                <span>{item.label}</span>
-                            </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
-                </SidebarContent>
-            </Sidebar>
-            <div className="flex flex-1 flex-col overflow-auto">
-                <main className="flex-1 p-6">{children}</main>
-            </div>
+          <Sidebar>
+            <SidebarContent>
+              <SidebarMenu>
+                {navItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton tooltip={item.tooltip} asChild>
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarContent>
+          </Sidebar>
+          <div className="flex flex-1 flex-col overflow-auto">
+            <main className="flex-1 p-6">{children}</main>
+          </div>
         </div>
       </div>
     </SidebarProvider>
