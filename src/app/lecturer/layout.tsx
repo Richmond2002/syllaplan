@@ -1,3 +1,6 @@
+
+"use client";
+
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -7,7 +10,11 @@ import {
   ClipboardList,
   BookCopy,
   PanelLeft,
+  LogOut,
 } from "lucide-react";
+import { getAuth, signOut } from "firebase/auth";
+import { app } from "@/lib/firebase/client";
+import { useRouter } from "next/navigation";
 
 import {
   SidebarProvider,
@@ -22,6 +29,7 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
   { href: "/lecturer", icon: LayoutDashboard, label: "Dashboard" },
@@ -37,6 +45,20 @@ export default function LecturerLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const auth = getAuth(app);
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged Out", description: "You have been successfully logged out." });
+      router.push("/login");
+    } catch (error: any) {
+      toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
+    }
+  };
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -72,7 +94,8 @@ export default function LecturerLayout({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <Button variant="ghost" className="w-full justify-start">
+          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
+            <LogOut />
             Log out
           </Button>
         </SidebarFooter>
