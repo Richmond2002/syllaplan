@@ -112,7 +112,7 @@ export default function LecturerLayout({
             </DropdownMenu>
           </div>
         </header>
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-hidden">
             <Sidebar>
                 <SidebarContent>
                     <SidebarMenu>
@@ -130,7 +130,7 @@ export default function LecturerLayout({
                 </SidebarContent>
             </Sidebar>
             <SidebarInset>
-                <main className="flex-1 p-6">{children}</main>
+                <main className="flex-1 overflow-auto p-6">{children}</main>
             </SidebarInset>
         </div>
       </div>

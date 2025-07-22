@@ -85,7 +85,7 @@ export default function AdminLayout({
             </DropdownMenu>
           </div>
         </header>
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-hidden">
           <Sidebar>
             <SidebarContent>
               <SidebarMenu>
@@ -103,7 +103,7 @@ export default function AdminLayout({
             </SidebarContent>
           </Sidebar>
           <SidebarInset>
-            <main className="flex-1 p-6">{children}</main>
+            <main className="flex-1 overflow-auto p-6">{children}</main>
           </SidebarInset>
         </div>
       </div>
