@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, BookOpen, PenSquare, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
   return (
@@ -25,6 +26,7 @@ export default function Home() {
             <span className="font-headline text-lg">CourseForge</span>
           </Link>
           <nav className="ml-auto flex items-center space-x-2">
+            <ThemeToggle />
             <Button variant="ghost" asChild>
               <Link href="/login">Log In</Link>
             </Button>

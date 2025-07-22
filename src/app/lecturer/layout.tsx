@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const navItems = [
   { href: "/lecturer", icon: LayoutDashboard, label: "Dashboard" },
@@ -106,6 +107,7 @@ export default function LecturerLayout({
           <div className="flex-1">
             <h2 className="text-lg font-semibold">Lecturer Panel</h2>
           </div>
+          <ThemeToggle />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>

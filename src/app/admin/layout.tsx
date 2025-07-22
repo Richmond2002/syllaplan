@@ -14,6 +14,7 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const navItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
@@ -73,6 +74,7 @@ export default function AdminLayout({
           <div className="flex-1">
             <h2 className="text-lg font-semibold">Admin Panel</h2>
           </div>
+          <ThemeToggle />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>
