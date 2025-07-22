@@ -22,8 +22,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
-  SidebarInset,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -87,7 +85,6 @@ export default function LecturerLayout({
             </Link>
           </div>
           <div className="flex items-center gap-4">
-             <SidebarTrigger className="hidden md:flex" />
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -128,8 +125,7 @@ export default function LecturerLayout({
                     </SidebarMenu>
                 </SidebarContent>
             </Sidebar>
-            <div className="relative flex flex-1 flex-col overflow-auto">
-                <SidebarTrigger className="md:hidden" />
+            <div className="flex flex-1 flex-col overflow-auto">
                 <main className="flex-1 p-6">{children}</main>
             </div>
         </div>
