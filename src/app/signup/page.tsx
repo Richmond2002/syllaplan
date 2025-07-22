@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -25,11 +25,19 @@ export default function SignupPage() {
     e.preventDefault();
     setIsLoading(true);
     const form = e.currentTarget as HTMLFormElement;
+    const firstName = (form.elements.namedItem("firstName") as HTMLInputElement).value;
+    const lastName = (form.elements.namedItem("lastName") as HTMLInputElement).value;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    const displayName = `${firstName} ${lastName}`.trim();
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, { displayName });
+      }
+
       toast({
         title: "Account Created!",
         description: "Redirecting to your dashboard...",
@@ -68,9 +76,15 @@ export default function SignupPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" placeholder="John Doe" required />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input id="firstName" name="firstName" placeholder="John" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input id="lastName" name="lastName" placeholder="Doe" required />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
