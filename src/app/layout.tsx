@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "CourseForge",
+  title: "SyllaPlan",
   description: "AI-Powered Syllabus & Lecture Planning",
 };
 

@@ -60,7 +60,7 @@ export default function SignupPage() {
         <Card className="border-t-0 rounded-t-none">
           <CardHeader className="text-center">
             <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
-            <CardDescription>Start your journey with CourseForge today.</CardDescription>
+            <CardDescription>Start your journey with SyllaPlan today.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">

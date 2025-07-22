@@ -23,7 +23,7 @@ export default function Home() {
             >
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
             </svg>
-            <span className="font-headline text-lg">CourseForge</span>
+            <span className="font-headline text-lg">SyllaPlan</span>
           </Link>
           <nav className="ml-auto flex items-center space-x-2">
             <ThemeToggle />
@@ -44,7 +44,7 @@ export default function Home() {
               Craft Brilliance, Teach with Ease
             </h1>
             <p className="mt-4 text-lg md:text-xl text-foreground/80 max-w-2xl mx-auto">
-              CourseForge is your AI-powered partner for creating stunning syllabi, planning engaging lectures, and managing your courses effortlessly.
+              SyllaPlan is your AI-powered partner for creating stunning syllabi, planning engaging lectures, and managing your courses effortlessly.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
@@ -57,7 +57,7 @@ export default function Home() {
         <section className="py-20 bg-muted/50">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="font-headline text-3xl font-bold">How CourseForge Empowers You</h2>
+              <h2 className="font-headline text-3xl font-bold">How SyllaPlan Empowers You</h2>
               <p className="text-muted-foreground mt-2">Go from idea to implementation in record time.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
@@ -85,7 +85,7 @@ export default function Home() {
             <div>
               <h2 className="font-headline text-3xl font-bold">Focus on Teaching, Not Tedium</h2>
               <p className="mt-4 text-muted-foreground">
-                CourseForge automates the repetitive administrative tasks of course creation, freeing you up to do what you do best: inspire students.
+                SyllaPlan automates the repetitive administrative tasks of course creation, freeing you up to do what you do best: inspire students.
                 From structuring content to setting deadlines, our intelligent tools provide a solid foundation, so you can focus on delivering exceptional learning experiences.
               </p>
               <Button asChild className="mt-6">
@@ -108,7 +108,7 @@ export default function Home() {
 
       <footer className="py-8 bg-background border-t">
         <div className="container text-center text-muted-foreground text-sm">
-          <p>&copy; {new Date().getFullYear()} CourseForge. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} SyllaPlan. All Rights Reserved.</p>
         </div>
       </footer>
     </div>

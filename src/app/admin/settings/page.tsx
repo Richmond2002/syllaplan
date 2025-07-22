@@ -10,7 +10,7 @@ export default function SettingsPage() {
         <div className="space-y-8 max-w-4xl mx-auto">
             <div>
                 <h1 className="text-3xl font-headline font-bold">Platform Settings</h1>
-                <p className="text-muted-foreground">Configure global settings for CourseForge.</p>
+                <p className="text-muted-foreground">Configure global settings for SyllaPlan.</p>
             </div>
             
             <Card>
@@ -21,7 +21,7 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="platform-name">Platform Name</Label>
-                        <Input id="platform-name" defaultValue="CourseForge" />
+                        <Input id="platform-name" defaultValue="SyllaPlan" />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="platform-logo">Platform Logo</Label>
