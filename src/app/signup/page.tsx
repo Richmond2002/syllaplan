@@ -29,6 +29,8 @@ export default function SignupPage() {
     const lastName = (form.elements.namedItem("lastName") as HTMLInputElement).value;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    
+    // Firebase Auth stores a single displayName. We'll combine the names here.
     const displayName = `${firstName} ${lastName}`.trim();
 
     try {
