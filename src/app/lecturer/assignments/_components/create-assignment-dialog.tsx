@@ -129,7 +129,7 @@ export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCr
                   <FormControl className="col-span-3">
                     <Input placeholder="e.g., Problem Set 4" {...field} />
                   </FormControl>
-                  <FormMessage className="col-span-4" />
+                  <FormMessage className="col-span-4 col-start-2" />
                 </FormItem>
               )}
             />
@@ -152,7 +152,7 @@ export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCr
                       <SelectItem value="CS374">Human-Computer Interaction</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage className="col-span-4" />
+                  <FormMessage className="col-span-4 col-start-2" />
                 </FormItem>
               )}
             />
@@ -169,7 +169,7 @@ export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCr
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage className="col-span-4" />
+                  <FormMessage className="col-span-4 col-start-2" />
                 </FormItem>
               )}
             />
@@ -208,7 +208,7 @@ export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCr
                       />
                     </PopoverContent>
                   </Popover>
-                   <FormMessage className="col-span-4" />
+                   <FormMessage className="col-span-4 col-start-2" />
                 </FormItem>
               )}
             />
