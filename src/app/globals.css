@@ -39,7 +39,7 @@
     --sidebar-ring: 262 84% 61%;
   }
   .dark {
-    --background: 215 28% 22%; /* #1E293B */
+    --background: 215 30% 17%; /* #1E293B */
     --foreground: 210 20% 98%; /* slate-50 */
     --card: 215 28% 17%; /* slate-900 */
     --card-foreground: 210 20% 98%;
