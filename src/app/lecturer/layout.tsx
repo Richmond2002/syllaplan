@@ -18,7 +18,6 @@ import { useRouter } from "next/navigation";
 import {
   SidebarProvider,
   Sidebar,
-  SidebarHeader,
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
@@ -39,12 +38,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { href: "/lecturer", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/lecturer/courses", icon: BookCopy, label: "My Courses" },
-  { href: "/lecturer/syllabus-generator", icon: ScrollText, label: "Syllabus Generator" },
-  { href: "/lecturer/lecture-planner", icon: PenSquare, label: "Lecture Planner" },
-  { href: "/lecturer/schedule", icon: Calendar, label: "Schedule" },
-  { href: "/lecturer/assignments", icon: ClipboardList, label: "Assignments" },
+  { href: "/lecturer", icon: LayoutDashboard, label: "Dashboard", tooltip: "Dashboard" },
+  { href: "/lecturer/courses", icon: BookCopy, label: "My Courses", tooltip: "My Courses" },
+  { href: "/lecturer/syllabus-generator", icon: ScrollText, label: "Syllabus Generator", tooltip: "Syllabus Generator" },
+  { href: "/lecturer/lecture-planner", icon: PenSquare, label: "Lecture Planner", tooltip: "Lecture Planner" },
+  { href: "/lecturer/schedule", icon: Calendar, label: "Schedule", tooltip: "Schedule" },
+  { href: "/lecturer/assignments", icon: ClipboardList, label: "Assignments", tooltip: "Assignments" },
 ];
 
 export default function LecturerLayout({
@@ -68,44 +67,11 @@ export default function LecturerLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <svg
-              className="size-8 text-primary"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-            </svg>
-            <h1 className="font-headline text-xl font-semibold">SyllaPlan</h1>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu className="space-y-2">
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild>
-                  <Link href={item.href}>
-                    <item.icon />
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-      </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/50 px-6 backdrop-blur-sm">
+      <div className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-             <div className="hidden items-center gap-2 md:flex">
+             <Link href="/" className="flex items-center gap-2 font-bold">
               <svg
                 className="size-6 text-primary"
                 xmlns="http://www.w3.org/2000/svg"
@@ -119,9 +85,10 @@ export default function LecturerLayout({
                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
               </svg>
               <h1 className="font-headline text-lg font-semibold">SyllaPlan</h1>
-            </div>
+            </Link>
           </div>
           <div className="flex items-center gap-4">
+             <SidebarTrigger className="hidden md:flex" />
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -145,8 +112,28 @@ export default function LecturerLayout({
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex-1 p-6">{children}</main>
-      </SidebarInset>
+        <div className="flex flex-1">
+            <Sidebar>
+                <SidebarContent>
+                    <SidebarMenu>
+                        {navItems.map((item) => (
+                        <SidebarMenuItem key={item.href}>
+                            <SidebarMenuButton tooltip={item.tooltip} asChild>
+                            <Link href={item.href}>
+                                <item.icon />
+                                <span>{item.label}</span>
+                            </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </SidebarContent>
+            </Sidebar>
+            <SidebarInset>
+                <main className="flex-1 p-6">{children}</main>
+            </SidebarInset>
+        </div>
+      </div>
     </SidebarProvider>
   );
 }
