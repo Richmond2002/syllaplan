@@ -4,23 +4,23 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%; /* Light Gray / #F9FAFB */
-    --foreground: 215 28% 17%; /* Dark Gray / #1F2937 */
+    --background: 0 0% 100%;
+    --foreground: 215 28% 17%;
     --card: 0 0% 100%;
     --card-foreground: 215 28% 17%;
     --popover: 0 0% 100%;
     --popover-foreground: 215 28% 17%;
-    --primary: 243 75% 58%; /* Indigo / #4F46E5 */
+    --primary: 243 75% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 14% 47%; /* Slate Gray / #64748B */
+    --secondary: 215 14% 47%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 220 13% 91%; /* slate-200 */
-    --muted-foreground: 220 9% 46%; /* slate-500 */
-    --accent: 160 84% 39%; /* Emerald Green / #10B981 */
+    --muted: 220 13% 91%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 160 84% 39%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 89%; /* slate-300 */
+    --border: 220 13% 89%;
     --input: 220 13% 89%;
     --ring: 243 75% 58%;
     --chart-1: 243 75% 58%;
@@ -39,19 +39,19 @@
     --sidebar-ring: 243 75% 58%;
   }
   .dark {
-    --background: 215 28% 17%; /* Dark Gray / #1F2937 */
-    --foreground: 210 20% 98%; /* slate-50 */
-    --card: 215 28% 11%; /* Even darker gray */
+    --background: 215 28% 17%;
+    --foreground: 210 20% 98%;
+    --card: 215 28% 11%;
     --card-foreground: 210 20% 98%;
     --popover: 215 28% 11%;
     --popover-foreground: 210 20% 98%;
-    --primary: 243 75% 68%; /* Lighter Indigo for dark mode */
+    --primary: 243 75% 68%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 14% 57%; /* Lighter Slate Gray */
+    --secondary: 215 14% 57%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 215 28% 27%; /* slate-700 */
-    --muted-foreground: 215 16% 67%; /* slate-400 */
-    --accent: 160 74% 49%; /* Lighter Emerald Green */
+    --muted: 215 28% 27%;
+    --muted-foreground: 215 16% 67%;
+    --accent: 160 74% 49%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
@@ -79,6 +79,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-image: linear-gradient(to bottom, #ffffff, #ff0000, #0000ff);
   }
 }
