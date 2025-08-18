@@ -32,11 +32,12 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { getFirestore, collection, addDoc, serverTimestamp, writeBatch, doc, runTransaction, getDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, writeBatch, doc, runTransaction, getDoc, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 import type { Lecturer } from "../../lecturers/page";
+import { logActivity } from "@/lib/firebase/log-activity";
 
 const courseSchema = z.object({
   code: z.string().min(1, "Course code is required."),
@@ -89,22 +90,27 @@ export function CreateCourseDialog({ onCourseCreated }: { onCourseCreated: () =>
             throw new Error("Selected lecturer not found.");
         }
 
-        const batch = writeBatch(db);
+        await runTransaction(db, async (transaction) => {
+            const lecturerRef = doc(db, "lecturers", values.lecturerId);
+            const lecturerDoc = await transaction.get(lecturerRef);
 
-        // 1. Add new course
-        const courseRef = doc(collection(db, "courses"));
-        batch.set(courseRef, {
-            ...values,
-            lecturerName: selectedLecturer.name,
-            students: 0,
-            createdAt: serverTimestamp(),
+            if (!lecturerDoc.exists()) {
+                throw "Lecturer document does not exist!";
+            }
+
+            const newCoursesCount = (lecturerDoc.data().courses || 0) + 1;
+            transaction.update(lecturerRef, { courses: newCoursesCount });
+
+            const courseRef = doc(collection(db, "courses"));
+            transaction.set(courseRef, {
+                ...values,
+                lecturerName: selectedLecturer.name,
+                students: 0,
+                createdAt: serverTimestamp(),
+            });
         });
-        
-        // 2. Increment course count for the selected lecturer
-        const lecturerRef = doc(db, "lecturers", values.lecturerId);
-        batch.update(lecturerRef, { courses: selectedLecturer.courses + 1 });
 
-        await batch.commit();
+        await logActivity('Admin', 'created a new course', values.title);
 
         toast({
             title: "Success",

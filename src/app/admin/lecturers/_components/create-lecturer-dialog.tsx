@@ -30,6 +30,7 @@ import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { Lecturer } from "../page";
+import { logActivity } from "@/lib/firebase/log-activity";
 
 const lecturerSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -62,10 +63,9 @@ export function CreateLecturerDialog({ onLecturerCreated }: { onLecturerCreated:
         createdAt: serverTimestamp(),
       };
       
-      // We don't wait for addDoc to finish before updating UI
       addDoc(collection(db, "lecturers"), newLecturerData)
-        .then(() => {
-            // The onLecturerCreated callback will now handle the fetch
+        .then(async () => {
+            await logActivity('Admin', 'added a new lecturer', values.name);
         }).catch(error => {
             console.error("Error creating lecturer: ", error);
             toast({
@@ -80,7 +80,6 @@ export function CreateLecturerDialog({ onLecturerCreated }: { onLecturerCreated:
         description: "Lecturer profile created successfully.",
       });
 
-      // Optimistic update
       onLecturerCreated({
         ...values,
         courses: 0,

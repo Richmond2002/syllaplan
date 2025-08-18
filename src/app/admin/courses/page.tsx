@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { logActivity } from "@/lib/firebase/log-activity";
 
 
 export interface Course {
@@ -98,6 +99,7 @@ export default function CoursesPage() {
             }
 
             await batch.commit();
+            await logActivity('Admin', 'deleted course', courseToDelete.title);
             
             toast({
                 title: "Success",

@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { logActivity } from "@/lib/firebase/log-activity";
 
 export interface Lecturer {
   id: string;
@@ -99,6 +100,7 @@ export default function LecturersPage() {
         try {
             const lecturerRef = doc(db, "lecturers", lecturerToDeactivate.id);
             await updateDoc(lecturerRef, { status: "Inactive" });
+            await logActivity('Admin', 'deactivated lecturer', lecturerToDeactivate.name);
             toast({
                 title: "Success",
                 description: `${lecturerToDeactivate.name} has been deactivated.`,
@@ -124,9 +126,9 @@ export default function LecturersPage() {
     const getStatusBadge = (status: Lecturer['status']) => {
         switch (status) {
             case 'Active':
-                return <Badge variant="secondary" className="bg-green-100 text-green-800">{status}</Badge>;
+                return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">{status}</Badge>;
             case 'On Sabbatical':
-                return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">{status}</Badge>;
+                return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">{status}</Badge>;
             case 'Inactive':
                 return <Badge variant="outline">{status}</Badge>;
             default:

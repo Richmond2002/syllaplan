@@ -6,15 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, BookOpen, GraduationCap, ArrowUpRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, orderBy, limit, Timestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
+import { formatDistanceToNow } from "date-fns";
 
-const recentActivities = [
-  { id: 1, user: "Dr. Evelyn Reed", action: "created a new course", subject: "Quantum Physics 101", timestamp: "5 minutes ago" },
-  { id: 2, user: "Admin", action: "approved a new lecturer account", subject: "Dr. Samuel Chen", timestamp: "1 hour ago" },
-  { id: 3, user: "System", action: "generated a platform usage report", subject: "Monthly Report", timestamp: "3 hours ago" },
-  { id: 4, user: "Dr. Isabella Rossi", action: "updated syllabus for", subject: "Art History", timestamp: "1 day ago" },
-];
+interface Activity {
+    id: string;
+    user: string;
+    action: string;
+    subject: string;
+    timestamp: Timestamp;
+}
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
@@ -22,7 +24,9 @@ export default function AdminDashboardPage() {
     courses: 0,
     students: 1234, // Static for now
   });
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isActivitiesLoading, setIsActivitiesLoading] = useState(true);
   const db = getFirestore(app);
 
   useEffect(() => {
@@ -43,7 +47,26 @@ export default function AdminDashboardPage() {
         setIsLoading(false);
       }
     }
+
+    async function fetchActivities() {
+        setIsActivitiesLoading(true);
+        try {
+            const q = query(collection(db, "activities"), orderBy("timestamp", "desc"), limit(5));
+            const querySnapshot = await getDocs(q);
+            const activitiesData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as Activity[];
+            setRecentActivities(activitiesData);
+        } catch (error) {
+            console.error("Error fetching activities:", error);
+        } finally {
+            setIsActivitiesLoading(false);
+        }
+    }
+
     fetchStats();
+    fetchActivities();
   }, [db]);
 
 
@@ -51,7 +74,7 @@ export default function AdminDashboardPage() {
     {
       title: "Total Lecturers",
       value: stats.lecturers,
-      change: "+12.5%", // Static for now
+      change: "+2", // Static for now
       icon: Users,
     },
     {
@@ -99,6 +122,11 @@ export default function AdminDashboardPage() {
           <CardDescription>A log of recent important actions across the platform.</CardDescription>
         </CardHeader>
         <CardContent>
+          {isActivitiesLoading ? (
+            <div className="flex justify-center items-center h-48">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -116,11 +144,14 @@ export default function AdminDashboardPage() {
                     <Badge variant="secondary" className="mr-2">{activity.action}</Badge>
                   </TableCell>
                   <TableCell>{activity.subject}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{activity.timestamp}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {formatDistanceToNow(activity.timestamp.toDate(), { addSuffix: true })}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
     </div>
