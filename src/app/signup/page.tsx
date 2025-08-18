@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc, getDoc, runTransaction, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { getFirestore, collection, doc, setDoc, serverTimestamp, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, GraduationCap, User, Building, Mail, Lock } from "lucide-react";
@@ -67,7 +67,7 @@ export default function SignupPage() {
 
         const batch = writeBatch(db);
 
-        // 1. Create user role document
+        // 1. Create user role document using the canonical email from the created user
         const userDocRef = doc(db, "users", user.email!);
         batch.set(userDocRef, {
           uid: user.uid,
@@ -86,7 +86,7 @@ export default function SignupPage() {
             batch.set(studentDocRef, {
                 uid: user.uid,
                 name: displayName,
-                email: user.email,
+                email: user.email, // Use canonical email
                 department,
                 program,
                 enrollmentYear,
@@ -99,7 +99,7 @@ export default function SignupPage() {
             batch.set(lecturerDocRef, {
                 uid: user.uid,
                 name: displayName,
-                email: user.email,
+                email: user.email, // Use canonical email
                 department: department || "Not Assigned",
                 courses: 0,
                 status: "Active",

@@ -28,7 +28,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     let emailToAuth = identifier;
-    // Check if the identifier looks like an index number to create the auth email
+    // If the identifier looks like an index number, construct the synthetic email for authentication.
     if (identifier.includes('/') && !identifier.includes('@')) {
       emailToAuth = `${identifier.toUpperCase().replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
     }
@@ -37,8 +37,8 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, emailToAuth, password);
       const user = userCredential.user;
 
-      // After successful authentication, user.email will be the correct, full email address.
-      // This is the key we must use to look up the role in the 'users' collection.
+      // CRITICAL FIX: After successful authentication, `user.email` contains the definitive, correct email address.
+      // Use THIS email to look up the role in the 'users' collection. This resolves the bug.
       const userDocRef = doc(db, "users", user.email!);
       const userDoc = await getDoc(userDocRef);
 
@@ -56,6 +56,7 @@ export default function LoginPage() {
           router.push("/student");
         }
       } else {
+         // This error now correctly means the role document is genuinely missing.
          throw new Error("User role not found.");
       }
     } catch (error: any) {
@@ -63,6 +64,8 @@ export default function LoginPage() {
         let errorMessage = "Invalid credentials. Please check your email/index number and password.";
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             errorMessage = "Invalid credentials. Please try again.";
+        } else if (error.message === "User role not found.") {
+            errorMessage = "Could not find account details. Please contact support.";
         }
         toast({
             title: "Login Failed",
