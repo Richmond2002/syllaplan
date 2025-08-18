@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -8,47 +9,41 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Wand2 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
-const mockPlan = {
-  introduction: {
-    title: "Introduction (10 minutes)",
-    points: [
-      "Hook: Start with a real-world problem that dynamic programming solves (e.g., shortest path in a GPS).",
-      "Define dynamic programming and its two key properties: optimal substructure and overlapping subproblems.",
-      "Briefly introduce the Fibonacci sequence as a classic example.",
-    ],
-  },
-  mainActivity: {
-    title: "Main Activity: Solving Fibonacci (25 minutes)",
-    points: [
-      "Demonstrate the naive recursive solution and highlight its inefficiency using a recursion tree.",
-      "Introduce memoization (top-down DP) and code the solution live.",
-      "Introduce tabulation (bottom-up DP) and explain how it builds the solution from the ground up.",
-    ],
-  },
-  conclusion: {
-    title: "Conclusion & Q&A (15 minutes)",
-    points: [
-      "Recap the differences between memoization and tabulation.",
-      "Present other common DP problems (e.g., Knapsack, Longest Common Subsequence).",
-      "Open the floor for questions.",
-    ],
-  },
-};
+import { generateLecturePlan, type GenerateLecturePlanOutput } from "@/ai/flows/generate-lecture-plan-flow";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LecturePlannerPage() {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedPlan, setGeneratedPlan] = useState<typeof mockPlan | null>(null);
+  const [generatedPlan, setGeneratedPlan] = useState<GenerateLecturePlanOutput | null>(null);
+  const { toast } = useToast();
 
   const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsGenerating(true);
     setGeneratedPlan(null);
     
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setGeneratedPlan(mockPlan);
-    setIsGenerating(false);
+    const formData = new FormData(e.currentTarget);
+    const lectureTopic = formData.get("lectureTopic") as string;
+    const learningObjectives = formData.get("learningObjectives") as string;
+    const duration = parseInt(formData.get("duration") as string, 10);
+
+    try {
+        const result = await generateLecturePlan({
+            topic: lectureTopic,
+            objectives: learningObjectives,
+            duration,
+        });
+        setGeneratedPlan(result);
+    } catch (error) {
+        console.error(error);
+        toast({
+            title: "Error Generating Plan",
+            description: "There was an issue with the AI service. Please try again later.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   return (
@@ -110,31 +105,17 @@ export default function LecturePlannerPage() {
             </div>
           )}
           {generatedPlan && (
-            <Accordion type="single" collapsible defaultValue="introduction" className="w-full">
-              <AccordionItem value="introduction">
-                <AccordionTrigger className="font-semibold">{generatedPlan.introduction.title}</AccordionTrigger>
-                <AccordionContent>
-                  <ul className="list-disc pl-5 space-y-2 text-foreground/80">
-                    {generatedPlan.introduction.points.map((point, i) => <li key={i}>{point}</li>)}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="mainActivity">
-                <AccordionTrigger className="font-semibold">{generatedPlan.mainActivity.title}</AccordionTrigger>
-                <AccordionContent>
-                   <ul className="list-disc pl-5 space-y-2 text-foreground/80">
-                    {generatedPlan.mainActivity.points.map((point, i) => <li key={i}>{point}</li>)}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="conclusion">
-                <AccordionTrigger className="font-semibold">{generatedPlan.conclusion.title}</AccordionTrigger>
-                <AccordionContent>
-                   <ul className="list-disc pl-5 space-y-2 text-foreground/80">
-                    {generatedPlan.conclusion.points.map((point, i) => <li key={i}>{point}</li>)}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
+            <Accordion type="multiple" defaultValue={["introduction"]} className="w-full">
+              {generatedPlan.sections.map((section, index) => (
+                 <AccordionItem value={section.title.toLowerCase().replace(/\s/g, '-')} key={index}>
+                    <AccordionTrigger className="font-semibold">{section.title} ({section.duration} minutes)</AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="list-disc pl-5 space-y-2 text-foreground/80">
+                        {section.points.map((point, i) => <li key={i}>{point}</li>)}
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+              ))}
             </Accordion>
           )}
           {!isGenerating && !generatedPlan && (

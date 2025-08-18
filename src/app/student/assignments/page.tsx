@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,28 +10,31 @@ import { getFirestore, collection, getDocs, query, where, Timestamp } from "fire
 import { app } from "@/lib/firebase/client";
 import { format, formatDistanceToNow } from 'date-fns';
 import { Loader2 } from "lucide-react";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-// Mock student's enrolled courses. In a real app, this would come from the student's profile.
-const studentEnrolledCourses = ["CS203", "PHY101", "CS374", "ARH300"];
-
-// Mock student's submissions. In a real app, this would be stored in the database.
-const studentSubmissions: { [key: string]: { status: string } } = {
-  // assignmentId: { status: 'Submitted' | 'Graded' | 'In Progress' }
+// In a real app, this would come from the student's profile.
+const getStudentEnrolledCourses = async (db: any, uid: string): Promise<string[]> => {
+    // This is a placeholder. A real implementation would fetch a student's enrolled course codes.
+    // For now, we assume students are enrolled in courses based on a mock or a simplified collection.
+    // Let's return a default list for demonstration.
+    return ["CS203", "PHY101", "CS374", "ARH300"];
 };
 
+const studentSubmissions: { [key: string]: { status: string } } = {
+  // Mock data, e.g., assignmentId: { status: 'Submitted' }
+};
 
 interface Assignment {
   id: string;
   title: string;
   course: string;
   dueDate: Timestamp;
-  status: string; // This is the assignment's overall status (e.g., Open, Closed)
+  status: string;
 }
 
 interface StudentAssignment extends Assignment {
-  studentStatus: string; // The specific status for this student (e.g., Not Started, In Progress, Submitted)
+  studentStatus: string;
 }
-
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -46,17 +49,21 @@ const getStatusBadge = (status: string) => {
 export default function StudentAssignmentsPage() {
     const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const fetchAssignments = useCallback(async () => {
+    const fetchAssignments = useCallback(async (uid: string) => {
         setIsLoading(true);
-        if (studentEnrolledCourses.length === 0) {
+        const enrolledCourses = await getStudentEnrolledCourses(db, uid);
+        
+        if (enrolledCourses.length === 0) {
             setIsLoading(false);
+            setAssignments([]);
             return;
         }
 
         try {
-            const q = query(collection(db, "assignments"), where("course", "in", studentEnrolledCourses));
+            const q = query(collection(db, "assignments"), where("course", "in", enrolledCourses));
             const querySnapshot = await getDocs(q);
             const assignmentsData = querySnapshot.docs.map((doc) => {
                 const data = doc.data() as Omit<Assignment, 'id'>;
@@ -68,9 +75,7 @@ export default function StudentAssignmentsPage() {
                 };
             }) as StudentAssignment[];
 
-            // Sort by due date
             assignmentsData.sort((a, b) => a.dueDate.toMillis() - b.dueDate.toMillis());
-
             setAssignments(assignmentsData);
         } catch (error) {
             console.error("Error fetching assignments: ", error);
@@ -80,8 +85,16 @@ export default function StudentAssignmentsPage() {
     }, [db]);
 
     useEffect(() => {
-        fetchAssignments();
-    }, [fetchAssignments]);
+       const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                fetchAssignments(user.uid);
+            } else {
+                setIsLoading(false);
+                setAssignments([]);
+            }
+       });
+       return () => unsubscribe();
+    }, [auth, fetchAssignments]);
 
     return (
         <div className="space-y-8">
@@ -134,4 +147,3 @@ export default function StudentAssignmentsPage() {
         </div>
     );
 }
-

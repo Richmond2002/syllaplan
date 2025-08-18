@@ -21,7 +21,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { CreateAssignmentDialog } from "./_components/create-assignment-dialog";
-import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, orderBy, Timestamp, where } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { format } from 'date-fns';
 
@@ -29,6 +30,7 @@ interface Assignment {
   id: string;
   title: string;
   course: string;
+  courseId: string;
   dueDate: Timestamp;
   submissions: number;
   status: string;
@@ -58,12 +60,17 @@ const getStatusBadge = (status: string) => {
 export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const auth = getAuth(app);
   const db = getFirestore(app);
 
-  const fetchAssignments = useCallback(async () => {
+  const fetchAssignments = useCallback(async (uid: string) => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, "assignments"), orderBy("createdAt", "desc"));
+      const q = query(
+        collection(db, "assignments"), 
+        where("lecturerId", "==", uid), 
+        orderBy("createdAt", "desc")
+      );
       const querySnapshot = await getDocs(q);
       const assignmentsData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -78,8 +85,16 @@ export default function AssignmentsPage() {
   }, [db]);
 
   useEffect(() => {
-    fetchAssignments();
-  }, [fetchAssignments]);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+            fetchAssignments(user.uid);
+        } else {
+            setIsLoading(false);
+            setAssignments([]);
+        }
+    });
+    return () => unsubscribe();
+  }, [auth, fetchAssignments]);
 
   return (
     <div className="space-y-8">
@@ -92,7 +107,7 @@ export default function AssignmentsPage() {
             Create, distribute, and manage assignments for your courses.
           </p>
         </div>
-        <CreateAssignmentDialog onAssignmentCreated={fetchAssignments} />
+        <CreateAssignmentDialog onAssignmentCreated={() => auth.currentUser && fetchAssignments(auth.currentUser.uid)} />
       </div>
       <Card>
         <CardContent className="pt-6">
