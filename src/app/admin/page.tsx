@@ -30,13 +30,12 @@ export default function AdminDashboardPage() {
       setIsLoading(true);
       try {
         const lecturersSnapshot = await getDocs(collection(db, "lecturers"));
-        // In the future, we would fetch courses similarly:
-        // const coursesSnapshot = await getDocs(collection(db, "courses"));
+        const coursesSnapshot = await getDocs(collection(db, "courses"));
         
         setStats(prevStats => ({
           ...prevStats,
           lecturers: lecturersSnapshot.size,
-          // courses: coursesSnapshot.size, 
+          courses: coursesSnapshot.size, 
         }));
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
