@@ -4,8 +4,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, GraduationCap, Mail, Lock } from "lucide-react";
@@ -28,17 +28,31 @@ export default function LoginPage() {
     setIsLoading(true);
 
     let emailToAuth = identifier;
-    // If the identifier looks like an index number, construct the synthetic email for authentication.
     if (identifier.includes('/') && !identifier.includes('@')) {
       emailToAuth = `${identifier.toUpperCase().replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
     }
 
     try {
+      await setPersistence(auth, browserLocalPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, emailToAuth, password);
       const user = userCredential.user;
 
-      // CRITICAL FIX: After successful authentication, `user.email` contains the definitive, correct email address.
-      // Use THIS email to look up the role in the 'users' collection. This resolves the bug.
+      // Guaranteed Admin Path
+      if (user.email === 'admin@gmail.com') {
+        const userDocRef = doc(db, "users", user.email);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          await setDoc(userDocRef, {
+            uid: user.uid,
+            email: user.email,
+            role: 'admin',
+          });
+        }
+        toast({ title: "Admin Login Successful", description: "Redirecting to dashboard..." });
+        router.push("/admin");
+        return;
+      }
+
       const userDocRef = doc(db, "users", user.email!);
       const userDoc = await getDoc(userDocRef);
 
@@ -48,23 +62,32 @@ export default function LoginPage() {
           title: "Login Successful",
           description: "Redirecting to your dashboard...",
         });
-        if (userData.role === 'admin') {
-          router.push("/admin");
-        } else if (userData.role === 'lecturer') {
+        if (userData.role === 'lecturer') {
           router.push("/lecturer");
         } else {
           router.push("/student");
         }
       } else {
-         // This error now correctly means the role document is genuinely missing.
-         throw new Error("User role not found.");
+        // This is a fallback for older lecturer accounts that might be missing a role doc.
+        // It assumes anyone who isn't an admin or a student (with a hidden domain) is a lecturer.
+        if (!user.email?.endsWith(HIDDEN_EMAIL_DOMAIN)) {
+            await setDoc(userDocRef, {
+                uid: user.uid,
+                email: user.email,
+                role: 'lecturer',
+            });
+            toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
+            router.push("/lecturer");
+        } else {
+            throw new Error("User role not found for student.");
+        }
       }
     } catch (error: any) {
         console.error("Login error:", error);
         let errorMessage = "Invalid credentials. Please check your email/index number and password.";
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             errorMessage = "Invalid credentials. Please try again.";
-        } else if (error.message === "User role not found.") {
+        } else if (error.message.includes("User role not found")) {
             errorMessage = "Could not find account details. Please contact support.";
         }
         toast({
@@ -79,7 +102,6 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-md">
-      {/* Header Section */}
       <div className="text-center mb-8">
         <div className="flex justify-center mb-6">
           <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg">
@@ -90,7 +112,6 @@ export default function LoginPage() {
         <p className="text-gray-600 dark:text-gray-300">Sign in to access your account</p>
       </div>
 
-      {/* Login Card */}
       <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl border border-gray-100 dark:border-gray-700">
         <div className="p-8">
           <div className="text-center mb-8">
@@ -103,7 +124,6 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email/Index Number Field */}
             <div className="space-y-2">
               <label htmlFor="identifier" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email or Index Number
@@ -122,7 +142,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -156,7 +175,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Sign In Button */}
             <button
               type="submit"
               disabled={isLoading || !identifier || !password}
@@ -173,7 +191,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-gray-200 dark:border-gray-600" />
@@ -183,7 +200,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Sign Up Link */}
           <div className="text-center">
             <span className="text-sm text-gray-600 dark:text-gray-400">Don't have an account? </span>
             <Link
@@ -196,7 +212,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="text-center mt-8">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           By signing in, you agree to our Terms of Service and Privacy Policy
