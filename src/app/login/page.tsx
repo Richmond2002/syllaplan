@@ -115,35 +115,35 @@ export default function LoginPage() {
           Enter your credentials to access your account.
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleLogin}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="identifier">Email or Index Number</Label>
-            <Input
-              id="identifier"
-              name="identifier"
-              placeholder="e.g., you@example.com or PS/ITC/21/0001"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" required />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Log In
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?&nbsp;
-            <Link href="/signup" className="text-primary hover:underline font-medium">
-              Sign Up
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
+      <CardContent>
+        <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="identifier">Email or Index Number</Label>
+                <Input
+                id="identifier"
+                name="identifier"
+                placeholder="e.g., you@example.com or PS/ITC/21/0001"
+                required
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" name="password" type="password" required />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Log In
+            </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="flex flex-col items-center justify-center text-sm">
+        <p className="text-muted-foreground">
+          Don&apos;t have an account?&nbsp;
+          <Link href="/signup" className="text-primary hover:underline font-medium">
+            Sign Up
+          </Link>
+        </p>
+      </CardFooter>
     </Card>
   );
 }
