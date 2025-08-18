@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -21,8 +22,8 @@ export default function SyllabusGeneratorPage() {
     // Mock AI generation
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const formData = new FormData(e.currentTarget);
-    const courseTitle = formData.get("courseTitle") as string;
+    const form = e.currentTarget;
+    const courseTitle = (form.elements.namedItem("courseTitle") as HTMLInputElement)?.value;
     
     const mockSyllabus = `
 ### Course Syllabus: ${courseTitle || "Introduction to Exampleology"}
