@@ -47,9 +47,13 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error(error);
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          errorMessage = "Invalid email or password. Please check your credentials and try again.";
+      }
       toast({
         title: "Login Failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
