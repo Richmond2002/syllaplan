@@ -6,11 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getFirestore, collection, getDocs, query, where, Timestamp, doc, getDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where, Timestamp, doc, getDoc, setDoc, serverTimestamp, increment } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from "@/lib/firebase/client";
 import { format, formatDistanceToNow } from 'date-fns';
 import { Loader2 } from "lucide-react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { ViewAssignmentDialog } from "./_components/view-assignment-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +23,7 @@ interface Assignment {
   dueDate: Timestamp;
   status: string;
   description?: string;
+  fileURL?: string;
 }
 
 export interface StudentAssignment extends Assignment {
@@ -44,45 +46,56 @@ export default function StudentAssignmentsPage() {
     const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | null>(null);
     const [isViewOpen, setIsViewOpen] = useState(false);
     
-    // Using a simple state for mocked submissions
-    const [studentSubmissions, setStudentSubmissions] = useState<{ [key: string]: { status: string } }>({});
-    
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
     const { toast } = useToast();
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-    const fetchAssignments = useCallback(async (uid: string) => {
+    const fetchAssignments = useCallback(async (user: User) => {
         setIsLoading(true);
         
-        const enrolledCourseIds: string[] = [];
-        const coursesQuerySnapshot = await getDocs(collection(db, "courses"));
-        for (const courseDoc of coursesQuerySnapshot.docs) {
-            const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", uid));
-            const enrollmentSnapshot = await getDocs(enrollmentQuery);
-            if (!enrollmentSnapshot.empty) {
-                enrolledCourseIds.push(courseDoc.id);
-            }
-        }
-        
-        if (enrolledCourseIds.length === 0) {
-            setIsLoading(false);
-            setAssignments([]);
-            return;
-        }
-
         try {
-            const q = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
-            const querySnapshot = await getDocs(q);
-            const assignmentsData = querySnapshot.docs.map((doc) => {
+            const enrolledCourseIds: string[] = [];
+            const coursesSnapshot = await getDocs(collection(db, "courses"));
+            for (const courseDoc of coursesSnapshot.docs) {
+                const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", user.uid));
+                const enrollmentSnapshot = await getDocs(enrollmentQuery);
+                if (!enrollmentSnapshot.empty) {
+                    enrolledCourseIds.push(courseDoc.id);
+                }
+            }
+            
+            if (enrolledCourseIds.length === 0) {
+                setAssignments([]);
+                return;
+            }
+
+            const assignmentsQuery = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
+            const querySnapshot = await getDocs(assignmentsQuery);
+            
+            const assignmentsDataPromises = querySnapshot.docs.map(async (doc) => {
                 const data = doc.data() as Omit<Assignment, 'id'>;
-                const studentStatus = studentSubmissions[doc.id]?.status || "Not Started";
+                
+                // Check for submission
+                const submissionDocRef = collection(db, `assignments/${doc.id}/submissions`);
+                const submissionQuery = query(submissionDocRef, where("studentId", "==", user.uid));
+                const submissionSnapshot = await getDocs(submissionQuery);
+
+                let studentStatus = "Not Started";
+                if (!submissionSnapshot.empty) {
+                    const submissionData = submissionSnapshot.docs[0].data();
+                    studentStatus = submissionData.grade ? "Graded" : "Submitted";
+                }
+                
                 return {
                     id: doc.id,
                     ...data,
                     studentStatus,
-                };
-            }) as StudentAssignment[];
+                } as StudentAssignment;
+            });
 
+            const assignmentsData = await Promise.all(assignmentsDataPromises);
             assignmentsData.sort((a, b) => a.dueDate.toMillis() - b.dueDate.toMillis());
             setAssignments(assignmentsData);
         } catch (error) {
@@ -90,13 +103,15 @@ export default function StudentAssignmentsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [db, studentSubmissions]);
+    }, [db]);
 
     useEffect(() => {
        const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-                fetchAssignments(user.uid);
+                setCurrentUser(user);
+                fetchAssignments(user);
             } else {
+                setCurrentUser(null);
                 setIsLoading(false);
                 setAssignments([]);
             }
@@ -109,15 +124,46 @@ export default function StudentAssignmentsPage() {
         setIsViewOpen(true);
     };
     
-    const handleAssignmentSubmitted = (assignmentId: string) => {
-        setStudentSubmissions(prev => ({
-            ...prev,
-            [assignmentId]: { status: 'Submitted' }
-        }));
-        toast({
-            title: "Success",
-            description: "Your assignment has been submitted.",
-        });
+    const handleAssignmentSubmitted = async (assignmentId: string, file: File) => {
+        if (!currentUser) return;
+        
+        try {
+            const assignment = assignments.find(a => a.id === assignmentId);
+            if (!assignment) throw new Error("Assignment not found");
+
+            // Upload file to storage
+            const filePath = `submissions/${assignment.courseId}/${currentUser.uid}/${file.name}`;
+            const storageRef = ref(storage, filePath);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            // Create submission document in Firestore
+            const submissionRef = doc(collection(db, `assignments/${assignmentId}/submissions`));
+            await setDoc(submissionRef, {
+                studentId: currentUser.uid,
+                studentName: currentUser.displayName,
+                submittedAt: serverTimestamp(),
+                fileURL: downloadURL,
+                grade: null,
+            });
+            
+            // Increment submissions count on assignment
+            const assignmentRef = doc(db, "assignments", assignmentId);
+            await setDoc(assignmentRef, { submissions: increment(1) }, { merge: true });
+
+            toast({
+                title: "Success",
+                description: "Your assignment has been submitted.",
+            });
+            fetchAssignments(currentUser); // Refresh list
+        } catch (error) {
+            console.error("Error submitting assignment:", error);
+            toast({
+                title: "Submission Failed",
+                description: "There was an error submitting your assignment.",
+                variant: "destructive"
+            });
+        }
     };
 
 
@@ -165,7 +211,7 @@ export default function StudentAssignmentsPage() {
                                             size="sm"
                                             onClick={() => handleViewAssignment(assignment)}
                                         >
-                                            {assignment.studentStatus === 'Graded' ? 'View Grade' : 'View Assignment'}
+                                            {assignment.studentStatus === 'Graded' ? 'View Grade' : 'View / Submit'}
                                         </Button>
                                     </TableCell>
                                 </TableRow>

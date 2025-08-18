@@ -36,6 +36,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +63,7 @@ const assignmentSchema = z.object({
   dueDate: z.date({
     required_error: "A due date is required.",
   }),
+  assignmentFile: z.instanceof(File).optional(),
 });
 
 export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCreated: () => void }) {
@@ -69,6 +71,7 @@ export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCr
   const [courses, setCourses] = useState<Course[]>([]);
   const { toast } = useToast();
   const db = getFirestore(app);
+  const storage = getStorage(app);
   const auth = getAuth(app);
 
   const form = useForm<z.infer<typeof assignmentSchema>>({
@@ -117,14 +120,27 @@ export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCr
     }
 
     try {
+      let fileURL = "";
+      if (values.assignmentFile) {
+        const file = values.assignmentFile;
+        const storageRef = ref(storage, `assignments/${selectedCourse.code}/${file.name}`);
+        const snapshot = await uploadBytes(storageRef, file);
+        fileURL = await getDownloadURL(snapshot.ref);
+      }
+        
       await addDoc(collection(db, "assignments"), {
-        ...values,
+        title: values.title,
+        courseId: values.courseId,
+        description: values.description,
+        dueDate: values.dueDate,
         lecturerId: auth.currentUser.uid,
-        course: selectedCourse.code, // Store course code for student filtering
+        course: selectedCourse.code,
         createdAt: serverTimestamp(),
         status: "Open",
         submissions: 0,
+        fileURL: fileURL,
       });
+
       toast({
         title: "Success",
         description: "Assignment created successfully.",
@@ -253,6 +269,25 @@ export function CreateAssignmentDialog({ onAssignmentCreated }: { onAssignmentCr
                 </FormItem>
               )}
             />
+            
+            <FormField
+              control={form.control}
+              name="assignmentFile"
+              render={({ field: { onChange, value, ...rest } }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">File</FormLabel>
+                   <FormControl className="col-span-3">
+                     <Input 
+                        type="file" 
+                        onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)}
+                        {...rest} 
+                    />
+                  </FormControl>
+                  <FormMessage className="col-span-4 col-start-2" />
+                </FormItem>
+              )}
+            />
+
 
             <DialogFooter>
                <DialogClose asChild>
