@@ -2,10 +2,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -136,48 +134,49 @@ export default function SignupPage() {
   };
 
   return (
-    <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full max-w-sm">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="student">Student</TabsTrigger>
-            <TabsTrigger value="lecturer">Lecturer</TabsTrigger>
-        </TabsList>
-        <Card className="border-t-0 rounded-t-none">
-          <CardHeader className="text-center">
-            <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
-            <CardDescription>Start your journey with SyllaPlan today.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSignup} className="space-y-4">
+    <>
+        <div className="grid gap-2 text-center">
+            <h1 className="text-3xl font-bold">Create an Account</h1>
+            <p className="text-balance text-muted-foreground">
+                Enter your information to get started.
+            </p>
+        </div>
+        <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="student">Student</TabsTrigger>
+                <TabsTrigger value="lecturer">Lecturer</TabsTrigger>
+            </TabsList>
+            <form onSubmit={handleSignup} className="grid gap-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="grid gap-2">
                   <Label htmlFor="firstName">First Name</Label>
                   <Input id="firstName" name="firstName" placeholder="John" required />
                 </div>
-                <div className="space-y-2">
+                <div className="grid gap-2">
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input id="lastName" name="lastName" placeholder="Doe" required />
                 </div>
               </div>
              
               {role === 'student' ? (
-                <div className="space-y-2">
+                <div className="grid gap-2">
                     <Label htmlFor="indexNumber">Index Number</Label>
                     <Input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required />
                 </div>
               ) : (
                 <>
-                 <div className="space-y-2">
+                 <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" name="email" type="email" placeholder="you@example.com" required />
                   </div>
-                   <div className="space-y-2">
+                   <div className="grid gap-2">
                     <Label htmlFor="department">Department</Label>
                     <Input id="department" name="department" placeholder="e.g. Computer Science" />
                   </div>
                 </>
               )}
 
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" name="password" type="password" required />
               </div>
@@ -186,16 +185,14 @@ export default function SignupPage() {
                 {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
               </Button>
             </form>
-          </CardContent>
-          <CardFooter className="flex flex-col items-center justify-center text-sm">
-            <p className="text-muted-foreground">
-                Already have an account?&nbsp;
-                <Link href="/login" className="text-primary hover:underline font-medium">
-                    Log In
-                </Link>
-            </p>
-          </CardFooter>
-        </Card>
-    </Tabs>
+        </Tabs>
+
+        <div className="mt-4 text-center text-sm">
+            Already have an account?{" "}
+            <Link href="/login" className="underline">
+                Log In
+            </Link>
+        </div>
+    </>
   );
 }
