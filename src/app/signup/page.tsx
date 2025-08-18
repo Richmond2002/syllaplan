@@ -12,7 +12,7 @@ import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase
 import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc, getDoc, runTransaction, query, where, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, GraduationCap, User, Building, Mail, Lock } from "lucide-react";
 
 const HIDDEN_EMAIL_DOMAIN = "courseforge.app";
 
@@ -29,10 +29,9 @@ export default function SignupPage() {
     setIsLoading(true);
     const form = e.currentTarget as HTMLFormElement;
     
-    const firstName = (form.elements.namedItem("firstName") as HTMLInputElement).value;
-    const lastName = (form.elements.namedItem("lastName") as HTMLInputElement).value;
+    const fullName = (form.elements.namedItem("fullName") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
-    const displayName = `${firstName} ${lastName}`.trim();
+    const displayName = fullName.trim();
 
     let email = "";
     let indexNumber = "";
@@ -41,21 +40,17 @@ export default function SignupPage() {
       if (role === 'student') {
         indexNumber = (form.elements.namedItem("indexNumber") as HTMLInputElement).value.toUpperCase();
         
-        // Check if index number is already in use
         const studentQuery = query(collection(db, "students"), where("indexNumber", "==", indexNumber));
         const studentSnapshot = await getDocs(studentQuery);
         if (!studentSnapshot.empty) {
             throw new Error("This index number is already registered.");
         }
-
-        // Construct a hidden, unique email from the index number
         email = `${indexNumber.replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
 
       } else { // Lecturer
         email = (form.elements.namedItem("email") as HTMLInputElement).value;
       }
       
-      // Check if user with this email already exists in the central users collection
       const userDocRef = doc(db, "users", email);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
@@ -68,7 +63,6 @@ export default function SignupPage() {
       if (user) {
         await updateProfile(user, { displayName });
 
-        // Create a record in the central 'users' collection for role management
         await setDoc(doc(db, "users", email), {
           uid: user.uid,
           email: user.email,
@@ -76,7 +70,6 @@ export default function SignupPage() {
           ...(role === 'student' && { indexNumber: indexNumber }),
         });
 
-        // Create a role-specific record
         if (role === 'student') {
             const department = indexNumber.split('/')[0];
             const program = indexNumber.split('/')[1];
@@ -86,7 +79,7 @@ export default function SignupPage() {
             await addDoc(collection(db, "students"), {
                 uid: user.uid,
                 name: displayName,
-                email: user.email, // Store the hidden email
+                email: user.email,
                 department,
                 program,
                 enrollmentYear,
@@ -112,11 +105,8 @@ export default function SignupPage() {
         title: "Account Created!",
         description: "Redirecting to your dashboard...",
       });
-      if (role === "student") {
-        router.push("/student");
-      } else {
-        router.push("/lecturer");
-      }
+      router.push(role === "student" ? "/student" : "/lecturer");
+
     } catch (error: any) {
       console.error(error);
       let description = error.message || "An unexpected error occurred. Please try again.";
@@ -134,80 +124,94 @@ export default function SignupPage() {
   };
 
   return (
-     <div className="space-y-8 text-white">
-        <div className="flex justify-center">
-            <svg
-                className="size-8"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#8A2BE2"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                >
-                <path d="M3 7.5c2.5-2 5.5-2 8 0s5.5 2 8 0" />
-                <path d="M3 15.5c2.5-2 5.5-2 8 0s5.5 2 8 0" />
-            </svg>
+    <div className="w-full max-w-md">
+      {/* Header Section */}
+      <div className="text-center mb-8">
+        <div className="flex justify-center mb-6">
+          <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg">
+            <GraduationCap className="h-8 w-8 text-white" />
+          </div>
         </div>
-        <div className="grid gap-2 text-center">
-            <h1 className="text-3xl font-bold">Create an Account</h1>
-            <p className="text-balance text-gray-400">
-                Enter your information to get started.
-            </p>
-        </div>
-        <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-[#1F2937] text-gray-400">
-                <TabsTrigger value="student" className="data-[state=active]:bg-[#374151] data-[state=active]:text-white">Student</TabsTrigger>
-                <TabsTrigger value="lecturer" className="data-[state=active]:bg-[#374151] data-[state=active]:text-white">Lecturer</TabsTrigger>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Your Account</h1>
+        <p className="text-gray-600">Join SyllaPlan to get started</p>
+      </div>
+
+      {/* Signup Card */}
+      <div className="bg-white shadow-xl rounded-2xl border border-gray-100">
+        <div className="p-8">
+          <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="student">I'm a Student</TabsTrigger>
+                <TabsTrigger value="lecturer">I'm a Lecturer</TabsTrigger>
             </TabsList>
-            <form onSubmit={handleSignup} className="grid gap-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" name="firstName" placeholder="John" required className="bg-[#1F2937] border-[#374151] text-white" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" name="lastName" placeholder="Doe" required className="bg-[#1F2937] border-[#374151] text-white" />
+          
+            <form onSubmit={handleSignup} className="space-y-6 mt-8">
+              <div className="space-y-2">
+                <label htmlFor="fullName" className="text-sm font-medium text-gray-700">Full Name</label>
+                <div className="relative">
+                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                   <input id="fullName" name="fullName" placeholder="John Doe" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
                 </div>
               </div>
              
               {role === 'student' ? (
-                <div className="grid gap-2">
-                    <Label htmlFor="indexNumber">Index Number</Label>
-                    <Input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required className="bg-[#1F2937] border-[#374151] text-white" />
+                <div className="space-y-2">
+                    <label htmlFor="indexNumber" className="text-sm font-medium text-gray-700">Index Number</label>
+                     <div className="relative">
+                        <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                    </div>
                 </div>
               ) : (
                 <>
-                 <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" placeholder="you@example.com" required className="bg-[#1F2937] border-[#374151] text-white" />
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <input id="email" name="email" type="email" placeholder="you@example.com" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                    </div>
                   </div>
-                   <div className="grid gap-2">
-                    <Label htmlFor="department">Department</Label>
-                    <Input id="department" name="department" placeholder="e.g. Computer Science" className="bg-[#1F2937] border-[#374151] text-white" />
+                  <div className="space-y-2">
+                    <label htmlFor="department" className="text-sm font-medium text-gray-700">Department</label>
+                     <div className="relative">
+                        <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <input id="department" name="department" placeholder="e.g. Computer Science" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                    </div>
                   </div>
                 </>
               )}
 
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required className="bg-[#1F2937] border-[#374151] text-white" />
+              <div className="space-y-2">
+                <label htmlFor="password">Password</label>
+                <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <input id="password" name="password" type="password" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                </div>
               </div>
               
-              <Button type="submit" className="w-full bg-[#8A2BE2] hover:bg-[#7f25cc]" disabled={isLoading}>
+              <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
                 {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
-              </Button>
+              </button>
             </form>
-        </Tabs>
+          </Tabs>
 
-        <div className="mt-4 text-center text-sm text-gray-400">
-            Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-[#8A2BE2] hover:underline">
+          <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-3 text-gray-500">OR</span>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <span className="text-sm text-gray-600">Already have an account? </span>
+              <Link href="/login" className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors">
                 Log In
-            </Link>
+              </Link>
+            </div>
         </div>
+      </div>
     </div>
   );
 }
