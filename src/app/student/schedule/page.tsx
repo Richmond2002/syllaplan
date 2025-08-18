@@ -1,30 +1,77 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { getFirestore, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { app } from "@/lib/firebase/client";
+import { Loader2 } from 'lucide-react';
 
-const scheduleData: { [key: string]: { time: string; type: 'lecture' | 'assignment' | 'exam'; title: string; course: string }[] } = {
-    '2024-06-18': [
-        { time: '10:00 AM', type: 'lecture', title: 'Dynamic Programming', course: 'CS203' },
-        { time: '2:00 PM', type: 'lecture', title: 'Wave-particle Duality', course: 'PHY101' },
-    ],
-    '2024-06-20': [
-        { time: '11:59 PM', type: 'assignment', title: 'Problem Set 3 Due', course: 'CS203' },
-    ],
-    '2024-06-25': [
-        { time: '1:00 PM', type: 'exam', title: 'Midterm Exam', course: 'PHY101' },
-    ],
-};
+interface ScheduleEvent {
+    date: Date;
+    type: 'assignment';
+    title: string;
+    course: string;
+}
 
 export default function StudentSchedulePage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
+    const [events, setEvents] = useState<ScheduleEvent[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
     
-    const formattedDate = date ? format(date, 'yyyy-MM-dd') : '';
-    const eventsForDate = scheduleData[formattedDate] || [];
+    const fetchStudentAssignments = useCallback(async (user: User) => {
+        // Find enrolled course IDs
+        const enrolledCourseIds: string[] = [];
+        const coursesSnapshot = await getDocs(collection(db, "courses"));
+        for (const courseDoc of coursesSnapshot.docs) {
+            const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", user.uid));
+            const enrollmentSnapshot = await getDocs(enrollmentQuery);
+            if (!enrollmentSnapshot.empty) {
+                enrolledCourseIds.push(courseDoc.id);
+            }
+        }
+        
+        if (enrolledCourseIds.length > 0) {
+            const assignmentsQuery = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
+            const querySnapshot = await getDocs(assignmentsQuery);
+            const assignmentsData = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    date: (data.dueDate as Timestamp).toDate(),
+                    type: 'assignment' as const,
+                    title: data.title,
+                    course: data.course,
+                };
+            });
+            setEvents(assignmentsData);
+        } else {
+            setEvents([]);
+        }
+    }, [db]);
+
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                await fetchStudentAssignments(user);
+            }
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [auth, fetchStudentAssignments]);
+
+    const eventsForSelectedDate = date 
+        ? events.filter(event => format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+        : [];
+    
+    const eventDates = events.map(e => e.date);
+
 
     return (
         <div className="space-y-8">
@@ -34,12 +81,25 @@ export default function StudentSchedulePage() {
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1 flex justify-center items-center">
+                    {isLoading ? (
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                   ) : (
                     <Calendar
                         mode="single"
                         selected={date}
                         onSelect={setDate}
                         className="p-0"
+                        modifiers={{
+                            events: eventDates
+                        }}
+                        modifiersStyles={{
+                           events: {
+                                color: 'hsl(var(--primary-foreground))',
+                                backgroundColor: 'hsl(var(--primary))',
+                           }
+                        }}
                     />
+                   )}
                 </Card>
                 <Card className="lg:col-span-2">
                     <CardHeader>
@@ -47,22 +107,26 @@ export default function StudentSchedulePage() {
                             Events for {date ? format(date, 'PPP') : '...'}
                         </CardTitle>
                         <CardDescription>
-                            {eventsForDate.length > 0 
-                                ? `You have ${eventsForDate.length} event(s) scheduled.`
+                            {eventsForSelectedDate.length > 0 
+                                ? `You have ${eventsForSelectedDate.length} event(s) scheduled.`
                                 : 'No events scheduled for this day.'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {eventsForDate.length > 0 ? (
+                         {isLoading ? (
+                             <div className="flex items-center justify-center h-48">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            </div>
+                        ) : eventsForSelectedDate.length > 0 ? (
                             <ul className="space-y-4">
-                                {eventsForDate.map((event, index) => (
+                                {eventsForSelectedDate.map((event, index) => (
                                     <li key={index} className="flex items-start space-x-4 p-3 rounded-lg bg-muted/50">
-                                        <div className="font-semibold text-lg text-primary">{event.time}</div>
+                                        <div className="font-semibold text-lg text-primary">{format(event.date, 'p')}</div>
                                         <div className="flex-grow">
                                             <div className="flex justify-between items-center">
                                                 <p className="font-semibold">{event.title}</p>
                                                 <Badge 
-                                                    variant={event.type === 'exam' ? 'destructive' : event.type === 'assignment' ? 'default' : 'secondary'}
+                                                    variant={event.type === 'assignment' ? 'default' : 'secondary'}
                                                 >
                                                     {event.type}
                                                 </Badge>
@@ -75,7 +139,7 @@ export default function StudentSchedulePage() {
                         ) : (
                              <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
                                 <div className="text-center text-muted-foreground">
-                                    <p>Select a date with an event to see details.</p>
+                                    <p>Select a date to see event details.</p>
                                 </div>
                             </div>
                         )}
