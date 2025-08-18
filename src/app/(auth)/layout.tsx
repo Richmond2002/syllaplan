@@ -7,11 +7,6 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
-      <div className="absolute top-4 left-4">
-        <Link href="/" className="text-sm text-primary hover:underline">
-          &larr; Back to Home
-        </Link>
-      </div>
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Link href="/" className="flex items-center gap-2 font-bold">
