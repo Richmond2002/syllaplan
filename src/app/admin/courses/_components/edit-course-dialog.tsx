@@ -31,7 +31,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { getFirestore, doc, updateDoc, writeBatch, collection, getDocs, increment } from "firebase/firestore";
+import { getFirestore, doc, updateDoc, writeBatch, collection, getDocs, increment, query, where } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Course } from "../page";
@@ -42,7 +42,7 @@ const courseSchema = z.object({
   code: z.string().min(1, "Course code is required."),
   title: z.string().min(1, "Course title is required."),
   department: z.string().min(1, "Department is required."),
-  lecturerId: z.string().min(1, "Please assign a lecturer."),
+  lecturerId: z.string().min(1, "Please assign a lecturer."), // This is the UID
 });
 
 interface EditCourseDialogProps {
@@ -91,6 +91,15 @@ export function EditCourseDialog({ course, isOpen, onOpenChange, onCourseUpdated
 
   const { isSubmitting } = form.formState;
 
+  const getLecturerDocIdByUid = async (uid: string): Promise<string | null> => {
+    const q = query(collection(db, "lecturers"), where("uid", "==", uid));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        return querySnapshot.docs[0].id;
+    }
+    return null;
+  }
+
   const onSubmit = async (values: z.infer<typeof courseSchema>) => {
     if (!course) return;
 
@@ -98,7 +107,7 @@ export function EditCourseDialog({ course, isOpen, onOpenChange, onCourseUpdated
       const batch = writeBatch(db);
       const courseRef = doc(db, "courses", course.id);
       
-      const selectedLecturer = lecturers.find(l => l.id === values.lecturerId);
+      const selectedLecturer = lecturers.find(l => l.uid === values.lecturerId);
       if (!selectedLecturer) {
         throw new Error("Selected lecturer not found.");
       }
@@ -109,14 +118,18 @@ export function EditCourseDialog({ course, isOpen, onOpenChange, onCourseUpdated
       };
       batch.update(courseRef, updatedCourseData);
 
-      // Handle lecturer course count change
       if (course.lecturerId !== values.lecturerId) {
-        // Decrement old lecturer's course count
-        const oldLecturerRef = doc(db, "lecturers", course.lecturerId);
-        batch.update(oldLecturerRef, { courses: increment(-1) });
-        // Increment new lecturer's course count
-        const newLecturerRef = doc(db, "lecturers", values.lecturerId);
-        batch.update(newLecturerRef, { courses: increment(1) });
+        const oldLecturerDocId = await getLecturerDocIdByUid(course.lecturerId);
+        const newLecturerDocId = await getLecturerDocIdByUid(values.lecturerId);
+
+        if (oldLecturerDocId) {
+            const oldLecturerRef = doc(db, "lecturers", oldLecturerDocId);
+            batch.update(oldLecturerRef, { courses: increment(-1) });
+        }
+        if (newLecturerDocId) {
+            const newLecturerRef = doc(db, "lecturers", newLecturerDocId);
+            batch.update(newLecturerRef, { courses: increment(1) });
+        }
       }
 
       await batch.commit();
@@ -201,7 +214,7 @@ export function EditCourseDialog({ course, isOpen, onOpenChange, onCourseUpdated
                     </FormControl>
                     <SelectContent>
                       {lecturers.map((lecturer) => (
-                        <SelectItem key={lecturer.id} value={lecturer.id}>
+                        <SelectItem key={lecturer.id} value={lecturer.uid}>
                           {lecturer.name}
                         </SelectItem>
                       ))}

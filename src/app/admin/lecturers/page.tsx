@@ -27,6 +27,7 @@ import { logActivity } from "@/lib/firebase/log-activity";
 
 export interface Lecturer {
   id: string;
+  uid: string;
   name: string;
   email: string;
   department: string;

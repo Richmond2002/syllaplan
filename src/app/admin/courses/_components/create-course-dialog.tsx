@@ -43,7 +43,7 @@ const courseSchema = z.object({
   code: z.string().min(1, "Course code is required."),
   title: z.string().min(1, "Course title is required."),
   department: z.string().min(1, "Department is required."),
-  lecturerId: z.string().min(1, "Please assign a lecturer."),
+  lecturerId: z.string().min(1, "Please assign a lecturer."), // This will now be the UID
 });
 
 export function CreateCourseDialog({ onCourseCreated }: { onCourseCreated: () => void }) {
@@ -85,25 +85,27 @@ export function CreateCourseDialog({ onCourseCreated }: { onCourseCreated: () =>
 
   const onSubmit = async (values: z.infer<typeof courseSchema>) => {
     try {
-        const selectedLecturer = lecturers.find(l => l.id === values.lecturerId);
+        // Here values.lecturerId is the lecturer's Auth UID
+        const selectedLecturer = lecturers.find(l => l.uid === values.lecturerId);
         if (!selectedLecturer) {
             throw new Error("Selected lecturer not found.");
         }
 
+        const lecturerDocRef = doc(db, "lecturers", selectedLecturer.id); // We need the doc ID to update the count
+
         await runTransaction(db, async (transaction) => {
-            const lecturerRef = doc(db, "lecturers", values.lecturerId);
-            const lecturerDoc = await transaction.get(lecturerRef);
+            const lecturerDoc = await transaction.get(lecturerDocRef);
 
             if (!lecturerDoc.exists()) {
                 throw "Lecturer document does not exist!";
             }
 
             const newCoursesCount = (lecturerDoc.data().courses || 0) + 1;
-            transaction.update(lecturerRef, { courses: newCoursesCount });
+            transaction.update(lecturerDocRef, { courses: newCoursesCount });
 
             const courseRef = doc(collection(db, "courses"));
             transaction.set(courseRef, {
-                ...values,
+                ...values, // This includes lecturerId which is the UID
                 lecturerName: selectedLecturer.name,
                 students: 0,
                 createdAt: serverTimestamp(),
@@ -199,7 +201,7 @@ export function CreateCourseDialog({ onCourseCreated }: { onCourseCreated: () =>
                     </FormControl>
                     <SelectContent>
                       {lecturers.map((lecturer) => (
-                        <SelectItem key={lecturer.id} value={lecturer.id}>
+                        <SelectItem key={lecturer.id} value={lecturer.uid}>
                           {lecturer.name}
                         </SelectItem>
                       ))}

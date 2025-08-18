@@ -35,7 +35,7 @@ export default function SignupPage() {
     const displayName = `${firstName} ${lastName}`.trim();
 
     try {
-      // Check if user with this email already exists
+      // Check if user with this email already exists in the central users collection
       const userDocRef = doc(db, "users", email);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
@@ -43,24 +43,36 @@ export default function SignupPage() {
       }
 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
       
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, { displayName });
+      if (user) {
+        await updateProfile(user, { displayName });
 
         // Create a record in the central 'users' collection for role management
         await setDoc(doc(db, "users", email), {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
+          uid: user.uid,
+          email: user.email,
           role: role,
         });
 
+        // Create a role-specific record
         if (role === 'student') {
           await addDoc(collection(db, "students"), {
-            uid: userCredential.user.uid,
+            uid: user.uid,
             name: displayName,
-            email: userCredential.user.email,
+            email: user.email,
             createdAt: serverTimestamp(),
           });
+        } else if (role === 'lecturer') {
+            await addDoc(collection(db, "lecturers"), {
+                uid: user.uid,
+                name: displayName,
+                email: user.email,
+                department: "Not Assigned", // Default department
+                courses: 0,
+                status: "Active",
+                createdAt: serverTimestamp(),
+            });
         }
       }
 
