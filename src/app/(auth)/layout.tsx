@@ -5,10 +5,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
-       <div className="w-full max-w-md">
-        {children}
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+      {/* This inner div is now flexed to the center by the parent */}
+      {children}
     </div>
   );
 }
