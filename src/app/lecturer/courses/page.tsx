@@ -22,7 +22,6 @@ interface Course {
 export default function MyCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -53,10 +52,8 @@ export default function MyCoursesPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
-        setUser(currentUser);
         fetchCourses(currentUser.uid);
       } else {
-        setUser(null);
         setIsLoading(false);
         setCourses([]);
       }
@@ -76,7 +73,10 @@ export default function MyCoursesPage() {
         </div>
       ) : courses.length === 0 ? (
         <Card className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">You are not assigned to any courses yet.</p>
+            <div className="text-center text-muted-foreground">
+                <p className="font-semibold">No courses assigned.</p>
+                <p className="text-sm">Please contact an admin to be assigned to a course.</p>
+            </div>
         </Card>
       ) : (
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">

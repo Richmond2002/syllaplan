@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -35,10 +35,24 @@ export default function SignupPage() {
     const displayName = `${firstName} ${lastName}`.trim();
 
     try {
+      // Check if user with this email already exists
+      const userDocRef = doc(db, "users", email);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        throw new Error("auth/email-already-in-use");
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       if (userCredential.user) {
         await updateProfile(userCredential.user, { displayName });
+
+        // Create a record in the central 'users' collection for role management
+        await setDoc(doc(db, "users", email), {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          role: role,
+        });
 
         if (role === 'student') {
           await addDoc(collection(db, "students"), {
@@ -62,7 +76,7 @@ export default function SignupPage() {
     } catch (error: any) {
       console.error(error);
       let description = "An unexpected error occurred. Please try again.";
-      if (error.code === "auth/email-already-in-use") {
+      if (error.code === "auth/email-already-in-use" || error.message === "auth/email-already-in-use") {
         description = "This email address is already in use by another account.";
       }
       toast({

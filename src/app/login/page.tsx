@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -17,10 +18,10 @@ import { Loader2 } from "lucide-react";
 const ADMIN_EMAIL = "admin@gmail.com";
 
 export default function LoginPage() {
-  const [role, setRole] = useState("student");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
+  const db = getFirestore(app);
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,11 +41,27 @@ export default function LoginPage() {
 
       if (userCredential.user.email === ADMIN_EMAIL) {
         router.push("/admin");
-      } else if (role === "student") {
-        router.push("/student");
+        return;
+      }
+
+      // Fetch user role from 'users' collection
+      const userDocRef = doc(db, "users", userCredential.user.email!);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.role === 'student') {
+          router.push("/student");
+        } else if (userData.role === 'lecturer') {
+          router.push("/lecturer");
+        } else {
+           throw new Error("User role not found.");
+        }
       } else {
+        // Fallback for users created before role system, default to lecturer
         router.push("/lecturer");
       }
+      
     } catch (error: any) {
       console.error(error);
       let errorMessage = "An unexpected error occurred. Please try again.";
@@ -62,7 +79,8 @@ export default function LoginPage() {
   };
 
   return (
-    <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full max-w-sm">
+    // We keep the tabs for UI purposes, but the redirection logic is now role-based.
+    <Tabs defaultValue="student" className="w-full max-w-sm">
         <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="student">Student</TabsTrigger>
             <TabsTrigger value="lecturer">Lecturer</TabsTrigger>
