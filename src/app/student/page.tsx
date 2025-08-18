@@ -2,35 +2,86 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
+import { getFirestore, collection, getDocs, query, where, Timestamp, collectionGroup } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BookOpen, Bell, Activity } from "lucide-react";
+import { BookOpen, Bell, Activity, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
 
-const upcomingDeadlines = [
-  { title: "Problem Set 3", course: "Advanced Algorithms", due: "in 2 days", progress: 80 },
-  { title: "Lab Report: Duality", course: "Quantum Physics 101", due: "in 4 days", progress: 40 },
-  { title: "Final Project Proposal", course: "HCI", due: "in 1 week", progress: 10 },
-];
+// This will be replaced by a real query
+const getStudentEnrolledCourses = async (db: any, uid: string): Promise<string[]> => {
+    // This is a placeholder. A real implementation would fetch a student's enrolled course codes.
+    return ["CS203", "PHY101", "CS374", "ARH300"];
+};
+
+interface UpcomingDeadline {
+    id: string;
+    title: string;
+    course: string;
+    due: string;
+}
 
 export default function StudentDashboardPage() {
   const [userName, setUserName] = useState("Student");
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({ courses: 0, deadlines: 0, grades: 0 });
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState<UpcomingDeadline[]>([]);
+
   const auth = getAuth(app);
+  const db = getFirestore(app);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const fullName = user.displayName || "Alex Doe";
+        const fullName = user.displayName || "Student";
         const firstName = fullName.split(" ")[0];
         setUserName(firstName);
+
+        setIsLoading(true);
+        try {
+            const enrolledCoursesCodes = await getStudentEnrolledCourses(db, user.uid);
+            
+            let deadlines: UpcomingDeadline[] = [];
+            if (enrolledCoursesCodes.length > 0) {
+                const assignmentsQuery = query(collection(db, "assignments"), where("course", "in", enrolledCoursesCodes));
+                const assignmentsSnapshot = await getDocs(assignmentsQuery);
+                deadlines = assignmentsSnapshot.docs
+                    .map(doc => ({
+                        id: doc.id,
+                        title: doc.data().title,
+                        course: doc.data().course,
+                        due: formatDistanceToNow(doc.data().dueDate.toDate(), { addSuffix: true }),
+                    }))
+                    .sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()); // This sort is approximate
+            }
+            
+            // In a real app, recent grades would be another query
+            const recentGradesCount = 0;
+
+            setStats({
+                courses: enrolledCoursesCodes.length,
+                deadlines: deadlines.length,
+                grades: recentGradesCount,
+            });
+            setUpcomingDeadlines(deadlines.slice(0, 3)); // Show top 3
+
+        } catch (error) {
+            console.error("Error fetching student dashboard data: ", error);
+        } finally {
+            setIsLoading(false);
+        }
+
+      } else {
+        setIsLoading(false);
       }
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, db]);
 
   return (
     <div className="space-y-8">
@@ -42,7 +93,7 @@ export default function StudentDashboardPage() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            {isLoading ? <Loader2 className="animate-spin h-6 w-6" /> : <div className="text-2xl font-bold">{stats.courses}</div>}
             <p className="text-xs text-muted-foreground">View your courses and materials</p>
           </CardContent>
         </Card>
@@ -52,18 +103,18 @@ export default function StudentDashboardPage() {
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">Assignments due this week</p>
+            {isLoading ? <Loader2 className="animate-spin h-6 w-6" /> : <div className="text-2xl font-bold">{stats.deadlines}</div>}
+            <p className="text-xs text-muted-foreground">Assignments due soon</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+            <CardTitle className="text-sm font-medium">Recent Grades</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+12</div>
-            <p className="text-xs text-muted-foreground">New announcements and grades</p>
+            {isLoading ? <Loader2 className="animate-spin h-6 w-6" /> : <div className="text-2xl font-bold">{stats.grades}</div>}
+            <p className="text-xs text-muted-foreground">New grades posted</p>
           </CardContent>
         </Card>
       </div>
@@ -74,17 +125,27 @@ export default function StudentDashboardPage() {
           <CardDescription>Stay on top of your assignments.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {upcomingDeadlines.map((item, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-center mb-1">
-                  <h3 className="font-semibold">{item.title} <span className="text-muted-foreground font-normal">- {item.course}</span></h3>
-                  <span className="text-sm text-muted-foreground">{item.due}</span>
+          {isLoading ? (
+             <div className="flex justify-center items-center h-48">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : upcomingDeadlines.length > 0 ? (
+             <div className="space-y-6">
+                {upcomingDeadlines.map((item, index) => (
+                <div key={index}>
+                    <div className="flex justify-between items-center mb-1">
+                    <h3 className="font-semibold">{item.title} <span className="text-muted-foreground font-normal">- {item.course}</span></h3>
+                    <span className="text-sm text-muted-foreground">{item.due}</span>
+                    </div>
+                    <Progress value={10} className="h-2" />
                 </div>
-                <Progress value={item.progress} className="h-2" />
-              </div>
-            ))}
-          </div>
+                ))}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-12">
+                <p>No upcoming deadlines. You're all caught up!</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -94,6 +155,11 @@ export default function StudentDashboardPage() {
           <CardDescription>A quick look at your latest results.</CardDescription>
         </CardHeader>
         <CardContent>
+           {isLoading ? (
+             <div className="flex justify-center items-center h-32">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+           ) : stats.grades > 0 ? (
            <Table>
             <TableHeader>
               <TableRow>
@@ -103,18 +169,14 @@ export default function StudentDashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell>Midterm Exam</TableCell>
-                <TableCell>Art History</TableCell>
-                <TableCell className="text-right font-medium">A- (91%)</TableCell>
-              </TableRow>
-               <TableRow>
-                <TableCell>Problem Set 2</TableCell>
-                <TableCell>Advanced Algorithms</TableCell>
-                <TableCell className="text-right font-medium">B+ (88%)</TableCell>
-              </TableRow>
+              {/* This would be populated by a real data fetch */}
             </TableBody>
           </Table>
+           ) : (
+             <div className="text-center text-muted-foreground py-10">
+                <p>No grades have been posted yet.</p>
+            </div>
+           )}
           <div className="text-center mt-4">
             <Button variant="link" asChild>
               <Link href="/student/grades">View All Grades</Link>
