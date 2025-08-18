@@ -134,65 +134,80 @@ export default function SignupPage() {
   };
 
   return (
-    <>
+     <div className="space-y-8 text-white">
+        <div className="flex justify-center">
+            <svg
+                className="size-8"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#8A2BE2"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                >
+                <path d="M3 7.5c2.5-2 5.5-2 8 0s5.5 2 8 0" />
+                <path d="M3 15.5c2.5-2 5.5-2 8 0s5.5 2 8 0" />
+            </svg>
+        </div>
         <div className="grid gap-2 text-center">
             <h1 className="text-3xl font-bold">Create an Account</h1>
-            <p className="text-balance text-muted-foreground">
+            <p className="text-balance text-gray-400">
                 Enter your information to get started.
             </p>
         </div>
         <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="student">Student</TabsTrigger>
-                <TabsTrigger value="lecturer">Lecturer</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-[#1F2937] text-gray-400">
+                <TabsTrigger value="student" className="data-[state=active]:bg-[#374151] data-[state=active]:text-white">Student</TabsTrigger>
+                <TabsTrigger value="lecturer" className="data-[state=active]:bg-[#374151] data-[state=active]:text-white">Lecturer</TabsTrigger>
             </TabsList>
             <form onSubmit={handleSignup} className="grid gap-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" name="firstName" placeholder="John" required />
+                  <Input id="firstName" name="firstName" placeholder="John" required className="bg-[#1F2937] border-[#374151] text-white" />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" name="lastName" placeholder="Doe" required />
+                  <Input id="lastName" name="lastName" placeholder="Doe" required className="bg-[#1F2937] border-[#374151] text-white" />
                 </div>
               </div>
              
               {role === 'student' ? (
                 <div className="grid gap-2">
                     <Label htmlFor="indexNumber">Index Number</Label>
-                    <Input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required />
+                    <Input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required className="bg-[#1F2937] border-[#374151] text-white" />
                 </div>
               ) : (
                 <>
                  <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+                    <Input id="email" name="email" type="email" placeholder="you@example.com" required className="bg-[#1F2937] border-[#374151] text-white" />
                   </div>
                    <div className="grid gap-2">
                     <Label htmlFor="department">Department</Label>
-                    <Input id="department" name="department" placeholder="e.g. Computer Science" />
+                    <Input id="department" name="department" placeholder="e.g. Computer Science" className="bg-[#1F2937] border-[#374151] text-white" />
                   </div>
                 </>
               )}
 
               <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required />
+                <Input id="password" name="password" type="password" required className="bg-[#1F2937] border-[#374151] text-white" />
               </div>
               
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-[#8A2BE2] hover:bg-[#7f25cc]" disabled={isLoading}>
                 {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
               </Button>
             </form>
         </Tabs>
 
-        <div className="mt-4 text-center text-sm">
+        <div className="mt-4 text-center text-sm text-gray-400">
             Already have an account?{" "}
-            <Link href="/login" className="underline">
+            <Link href="/login" className="font-semibold text-[#8A2BE2] hover:underline">
                 Log In
             </Link>
         </div>
-    </>
+    </div>
   );
 }
