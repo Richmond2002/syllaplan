@@ -11,10 +11,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc, getDoc, runTransaction } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc, getDoc, runTransaction, query, where, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+
+const HIDDEN_EMAIL_DOMAIN = "courseforge.app";
 
 export default function SignupPage() {
   const [role, setRole] = useState("student");
@@ -28,14 +30,33 @@ export default function SignupPage() {
     e.preventDefault();
     setIsLoading(true);
     const form = e.currentTarget as HTMLFormElement;
+    
     const firstName = (form.elements.namedItem("firstName") as HTMLInputElement).value;
     const lastName = (form.elements.namedItem("lastName") as HTMLInputElement).value;
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
-    
     const displayName = `${firstName} ${lastName}`.trim();
 
+    let email = "";
+    let indexNumber = "";
+
     try {
+      if (role === 'student') {
+        indexNumber = (form.elements.namedItem("indexNumber") as HTMLInputElement).value.toUpperCase();
+        
+        // Check if index number is already in use
+        const studentQuery = query(collection(db, "students"), where("indexNumber", "==", indexNumber));
+        const studentSnapshot = await getDocs(studentQuery);
+        if (!studentSnapshot.empty) {
+            throw new Error("This index number is already registered.");
+        }
+
+        // Construct a hidden, unique email from the index number
+        email = `${indexNumber.replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
+
+      } else { // Lecturer
+        email = (form.elements.namedItem("email") as HTMLInputElement).value;
+      }
+      
       // Check if user with this email already exists in the central users collection
       const userDocRef = doc(db, "users", email);
       const userDoc = await getDoc(userDocRef);
@@ -54,53 +75,38 @@ export default function SignupPage() {
           uid: user.uid,
           email: user.email,
           role: role,
+          ...(role === 'student' && { indexNumber: indexNumber }),
         });
 
         // Create a role-specific record
         if (role === 'student') {
-          const department = (form.elements.namedItem("department") as HTMLInputElement).value;
-          const program = (form.elements.namedItem("program") as HTMLInputElement).value;
-          const year = (form.elements.namedItem("year") as HTMLInputElement).value;
-          
-          const yearAbbr = year.substring(2);
+            const department = indexNumber.split('/')[0];
+            const program = indexNumber.split('/')[1];
+            const yearSuffix = indexNumber.split('/')[2];
+            const enrollmentYear = `20${yearSuffix}`;
 
-          const studentCounterRef = doc(db, "counters", "students");
+            const currentYear = new Date().getFullYear();
+            const level = (currentYear - parseInt(enrollmentYear, 10)) * 100 + 100;
 
-          const newIndexNumber = await runTransaction(db, async (transaction) => {
-            const counterDoc = await transaction.get(studentCounterRef);
-            let newCount = 1;
-            if (counterDoc.exists()) {
-              newCount = counterDoc.data().count + 1;
-            }
-            transaction.set(studentCounterRef, { count: newCount }, { merge: true });
-
-            const paddedId = newCount.toString().padStart(4, '0');
-            return `${department.toUpperCase()}/${program.toUpperCase()}/${yearAbbr}/${paddedId}`;
-          });
-
-          const currentYear = new Date().getFullYear();
-          const enrollmentYear = parseInt(year, 10);
-          const level = (currentYear - enrollmentYear) * 100 + 100;
-
-
-          await addDoc(collection(db, "students"), {
-            uid: user.uid,
-            name: displayName,
-            email: user.email,
-            department: department.toUpperCase(),
-            program: program.toUpperCase(),
-            enrollmentYear: enrollmentYear,
-            level: level > 400 ? 400 : level, // Cap level at 400
-            indexNumber: newIndexNumber,
-            createdAt: serverTimestamp(),
-          });
+            await addDoc(collection(db, "students"), {
+                uid: user.uid,
+                name: displayName,
+                email: user.email, // Store the hidden email
+                department,
+                program,
+                enrollmentYear,
+                level: level > 400 ? 400 : level,
+                indexNumber,
+                createdAt: serverTimestamp(),
+            });
 
         } else if (role === 'lecturer') {
+            const department = (form.elements.namedItem("department") as HTMLInputElement).value;
             await addDoc(collection(db, "lecturers"), {
                 uid: user.uid,
                 name: displayName,
                 email: user.email,
-                department: "Not Assigned", // Default department, admin can change
+                department: department || "Not Assigned",
                 courses: 0,
                 status: "Active",
                 createdAt: serverTimestamp(),
@@ -119,9 +125,9 @@ export default function SignupPage() {
       }
     } catch (error: any) {
       console.error(error);
-      let description = "An unexpected error occurred. Please try again.";
-      if (error.code === "auth/email-already-in-use" || error.message === "auth/email-already-in-use") {
-        description = "This email address is already in use by another account.";
+      let description = error.message || "An unexpected error occurred. Please try again.";
+      if (error.code === "auth/email-already-in-use" || description.includes("auth/email-already-in-use")) {
+        description = "This email or index number is already in use by another account.";
       }
       toast({
         title: "Signup Failed",
@@ -156,43 +162,29 @@ export default function SignupPage() {
                   <Input id="lastName" name="lastName" placeholder="Doe" required />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="you@example.com" required />
-              </div>
+             
+              {role === 'student' ? (
+                <div className="space-y-2">
+                    <Label htmlFor="indexNumber">Index Number</Label>
+                    <Input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required />
+                </div>
+              ) : (
+                <>
+                 <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Input id="department" name="department" placeholder="e.g. Computer Science" />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" name="password" type="password" required />
               </div>
-              
-              {role === 'student' && (
-                <>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="department">Department</Label>
-                            <Input id="department" name="department" placeholder="e.g. PS" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="program">Program</Label>
-                            <Input id="program" name="program" placeholder="e.g. ITC" required />
-                        </div>
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="year">Enrollment Year</Label>
-                        <Select name="year" required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select year..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="2024">2024</SelectItem>
-                            <SelectItem value="2023">2023</SelectItem>
-                            <SelectItem value="2022">2022</SelectItem>
-                            <SelectItem value="2021">2021</SelectItem>
-                          </SelectContent>
-                        </Select>
-                    </div>
-                </>
-              )}
               
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
