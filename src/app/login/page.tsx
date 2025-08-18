@@ -14,6 +14,8 @@ import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
+const ADMIN_EMAIL = "admin@gmail.com";
+
 export default function LoginPage() {
   const [role, setRole] = useState("student");
   const [isLoading, setIsLoading] = useState(false);
@@ -30,12 +32,15 @@ export default function LoginPage() {
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
-      if (role === "student") {
+
+      if (userCredential.user.email === ADMIN_EMAIL) {
+        router.push("/admin");
+      } else if (role === "student") {
         router.push("/student");
       } else {
         router.push("/lecturer");
