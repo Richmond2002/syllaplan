@@ -47,6 +47,7 @@ import {
 import { app } from "@/lib/firebase/client";
 import type { Course } from "../page";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { calculateStudentLevel } from "@/lib/utils";
 
 interface EnrollStudentDialogProps {
   course: Course | null;
@@ -90,7 +91,14 @@ export function EnrollStudentDialog({
       );
       const querySnapshot = await getDocs(q);
       const studentsData = querySnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Student)
+        (doc) => {
+          const data = doc.data();
+          return { 
+            id: doc.id,
+            ...data,
+            level: calculateStudentLevel(data.indexNumber)
+          } as Student;
+        }
       );
       setEnrolledStudents(studentsData);
     } catch (error) {
@@ -141,26 +149,27 @@ export function EnrollStudentDialog({
           where("program", "==", searchCriteria.program.toUpperCase())
         );
       }
-      if (searchCriteria.level) {
-        conditions.push(where("level", "==", parseInt(searchCriteria.level)));
-      }
-
+      
       const q = query(collection(db, "students"), ...conditions);
       const querySnapshot = await getDocs(q);
+      
       const studentsData = querySnapshot.docs.map(
         (doc) =>
           ({
             id: doc.id,
             ...doc.data(),
-          } as Student)
+          } as Omit<Student, 'level'>)
       );
-
+      
       const enrolledStudentUids = new Set(enrolledStudents.map((s) => s.uid));
-      const newStudents = studentsData.filter(
-        (s) => !enrolledStudentUids.has(s.uid)
-      );
+      let newStudents = studentsData.filter(s => !enrolledStudentUids.has(s.uid));
 
-      setSearchResults(newStudents);
+      if (searchCriteria.level) {
+        const targetLevel = parseInt(searchCriteria.level);
+        newStudents = newStudents.filter(student => calculateStudentLevel(student.indexNumber) === targetLevel);
+      }
+
+      setSearchResults(newStudents.map(s => ({...s, level: calculateStudentLevel(s.indexNumber)})));
 
       if (newStudents.length === 0) {
         toast({
@@ -192,7 +201,6 @@ export function EnrollStudentDialog({
             uid: student.uid,
             name: student.name,
             indexNumber: student.indexNumber,
-            level: student.level,
             enrolledAt: serverTimestamp(),
         });
       });

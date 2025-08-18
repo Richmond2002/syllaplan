@@ -85,9 +85,6 @@ export default function SignupPage() {
             const yearSuffix = indexNumber.split('/')[2];
             const enrollmentYear = `20${yearSuffix}`;
 
-            const currentYear = new Date().getFullYear();
-            const level = (currentYear - parseInt(enrollmentYear, 10)) * 100 + 100;
-
             await addDoc(collection(db, "students"), {
                 uid: user.uid,
                 name: displayName,
@@ -95,7 +92,6 @@ export default function SignupPage() {
                 department,
                 program,
                 enrollmentYear,
-                level: level > 400 ? 400 : level,
                 indexNumber,
                 createdAt: serverTimestamp(),
             });
