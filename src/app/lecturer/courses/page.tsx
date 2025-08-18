@@ -4,14 +4,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileEdit, Users, BarChart, Loader2 } from "lucide-react";
+import { FileEdit, Users, BarChart, Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
+import { EnrollStudentDialog } from "./_components/enroll-student-dialog";
 
-interface Course {
+export interface Course {
   id: string;
   title: string;
   code: string;
@@ -22,6 +23,8 @@ interface Course {
 export default function MyCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
   
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -60,55 +63,77 @@ export default function MyCoursesPage() {
     });
     return () => unsubscribe();
   }, [auth, fetchCourses]);
+  
+  const handleOpenEnrollDialog = (course: Course) => {
+    setSelectedCourse(course);
+    setIsEnrollDialogOpen(true);
+  };
+  
+  const handleEnrollmentUpdated = () => {
+    // Refetch courses to update student counts
+    if (auth.currentUser) {
+      fetchCourses(auth.currentUser.uid);
+    }
+  };
+
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-headline font-bold">My Courses</h1>
-        <p className="text-muted-foreground">An overview of all courses you are teaching.</p>
-      </div>
-       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-headline font-bold">My Courses</h1>
+          <p className="text-muted-foreground">An overview of all courses you are teaching.</p>
         </div>
-      ) : courses.length === 0 ? (
-        <Card className="flex items-center justify-center h-64">
-            <div className="text-center text-muted-foreground">
-                <p className="font-semibold">No courses assigned.</p>
-                <p className="text-sm">Please contact an admin to be assigned to a course.</p>
-            </div>
-        </Card>
-      ) : (
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        {courses.map((course) => (
-          <Card key={course.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="font-headline text-2xl">{course.title}</CardTitle>
-                  <CardDescription>{course.code}</CardDescription>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{course.students} students</span>
-                </div>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : courses.length === 0 ? (
+          <Card className="flex items-center justify-center h-64">
+              <div className="text-center text-muted-foreground">
+                  <p className="font-semibold">No courses assigned.</p>
+                  <p className="text-sm">Please contact an admin to be assigned to a course.</p>
               </div>
-            </CardHeader>
-            <CardContent className="flex-grow">
-              <p className="text-sm text-foreground/80">{course.description || "No description provided."}</p>
-            </CardContent>
-            <div className="p-6 pt-0 mt-auto grid grid-cols-2 gap-2">
-                <Button variant="outline" asChild>
-                    <Link href="/lecturer/syllabus-generator"><FileEdit className="mr-2 h-4 w-4" /> Edit Syllabus</Link>
-                </Button>
-                <Button variant="outline" asChild>
-                    <Link href="#"><BarChart className="mr-2 h-4 w-4" /> View Analytics</Link>
-                </Button>
-            </div>
           </Card>
-        ))}
+        ) : (
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+          {courses.map((course) => (
+            <Card key={course.id} className="flex flex-col">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="font-headline text-2xl">{course.title}</CardTitle>
+                    <CardDescription>{course.code}</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{course.students} students</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <p className="text-sm text-foreground/80">{course.description || "No description provided."}</p>
+              </CardContent>
+              <div className="p-6 pt-0 mt-auto grid grid-cols-2 gap-2">
+                  <Button variant="outline" asChild>
+                      <Link href="/lecturer/syllabus-generator"><FileEdit className="mr-2 h-4 w-4" /> Edit Syllabus</Link>
+                  </Button>
+                  <Button variant="default" onClick={() => handleOpenEnrollDialog(course)}>
+                    <UserPlus className="mr-2 h-4 w-4" /> Enroll Students
+                  </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+        )}
       </div>
-      )}
-    </div>
+
+      <EnrollStudentDialog
+        isOpen={isEnrollDialogOpen}
+        onOpenChange={setIsEnrollDialogOpen}
+        course={selectedCourse}
+        onEnrollmentUpdated={handleEnrollmentUpdated}
+      />
+    </>
   );
 }
