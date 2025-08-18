@@ -11,38 +11,20 @@ import { app } from "@/lib/firebase/client";
 import { format, formatDistanceToNow } from 'date-fns';
 import { Loader2 } from "lucide-react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-
-
-// Fetches the course IDs a student is enrolled in.
-const getStudentEnrolledCourseIds = async (db: any, studentUid: string): Promise<string[]> => {
-    const enrolledCourses: string[] = [];
-    const coursesRef = collection(db, "courses");
-    const coursesSnapshot = await getDocs(coursesRef);
-
-    for (const courseDoc of coursesSnapshot.docs) {
-        const enrollmentDocRef = doc(db, `courses/${courseDoc.id}/enrolledStudents`, studentUid);
-        const enrollmentDoc = await getDoc(enrollmentDocRef);
-        if (enrollmentDoc.exists()) {
-            enrolledCourses.push(courseDoc.id);
-        }
-    }
-    return enrolledCourses;
-};
-
-
-const studentSubmissions: { [key: string]: { status: string } } = {
-  // Mock data, e.g., assignmentId: { status: 'Submitted' }
-};
+import { ViewAssignmentDialog } from "./_components/view-assignment-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Assignment {
   id: string;
   title: string;
   course: string;
+  courseId: string;
   dueDate: Timestamp;
   status: string;
+  description?: string;
 }
 
-interface StudentAssignment extends Assignment {
+export interface StudentAssignment extends Assignment {
   studentStatus: string;
 }
 
@@ -59,24 +41,19 @@ const getStatusBadge = (status: string) => {
 export default function StudentAssignmentsPage() {
     const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedAssignment, setSelectedAssignment] = useState<StudentAssignment | null>(null);
+    const [isViewOpen, setIsViewOpen] = useState(false);
+    
+    // Using a simple state for mocked submissions
+    const [studentSubmissions, setStudentSubmissions] = useState<{ [key: string]: { status: string } }>({});
+    
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const { toast } = useToast();
 
     const fetchAssignments = useCallback(async (uid: string) => {
         setIsLoading(true);
-        // Find student document to get their UID for enrollment checks
-        const studentQuery = query(collection(db, "students"), where("uid", "==", uid));
-        const studentSnapshot = await getDocs(studentQuery);
         
-        if (studentSnapshot.empty) {
-            console.log("No student profile found for current user.");
-            setIsLoading(false);
-            return;
-        }
-
-        const studentDoc = studentSnapshot.docs[0];
-        const studentId = studentDoc.id; // This is the doc ID, not the UID.
-
         const enrolledCourseIds: string[] = [];
         const coursesQuerySnapshot = await getDocs(collection(db, "courses"));
         for (const courseDoc of coursesQuerySnapshot.docs) {
@@ -113,7 +90,7 @@ export default function StudentAssignmentsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [db]);
+    }, [db, studentSubmissions]);
 
     useEffect(() => {
        const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -126,8 +103,26 @@ export default function StudentAssignmentsPage() {
        });
        return () => unsubscribe();
     }, [auth, fetchAssignments]);
+    
+    const handleViewAssignment = (assignment: StudentAssignment) => {
+        setSelectedAssignment(assignment);
+        setIsViewOpen(true);
+    };
+    
+    const handleAssignmentSubmitted = (assignmentId: string) => {
+        setStudentSubmissions(prev => ({
+            ...prev,
+            [assignmentId]: { status: 'Submitted' }
+        }));
+        toast({
+            title: "Success",
+            description: "Your assignment has been submitted.",
+        });
+    };
+
 
     return (
+        <>
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-headline font-bold">My Assignments</h1>
@@ -168,7 +163,7 @@ export default function StudentAssignmentsPage() {
                                         <Button 
                                             variant={assignment.studentStatus === 'Graded' ? 'outline' : 'default'}
                                             size="sm"
-                                            disabled={assignment.studentStatus === 'Submitted'}
+                                            onClick={() => handleViewAssignment(assignment)}
                                         >
                                             {assignment.studentStatus === 'Graded' ? 'View Grade' : 'View Assignment'}
                                         </Button>
@@ -181,5 +176,12 @@ export default function StudentAssignmentsPage() {
                 </CardContent>
             </Card>
         </div>
+        <ViewAssignmentDialog
+            isOpen={isViewOpen}
+            onOpenChange={setIsViewOpen}
+            assignment={selectedAssignment}
+            onAssignmentSubmitted={handleAssignmentSubmitted}
+        />
+        </>
     );
 }
