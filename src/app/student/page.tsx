@@ -4,26 +4,21 @@
 import { useState, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
-import { getFirestore, collection, getDocs, query, where, Timestamp, collectionGroup } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BookOpen, Bell, Activity, Loader2 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-
-// This will be replaced by a real query
-const getStudentEnrolledCourses = async (db: any, uid: string): Promise<string[]> => {
-    // This is a placeholder. A real implementation would fetch a student's enrolled course codes.
-    return ["CS203", "PHY101", "CS374", "ARH300"];
-};
+import { Progress } from "@/components/ui/progress";
 
 interface UpcomingDeadline {
     id: string;
     title: string;
     course: string;
     due: string;
+    dueDate: Date;
 }
 
 export default function StudentDashboardPage() {
@@ -44,27 +39,42 @@ export default function StudentDashboardPage() {
 
         setIsLoading(true);
         try {
-            const enrolledCoursesCodes = await getStudentEnrolledCourses(db, user.uid);
-            
+            // Get enrolled course IDs
+            const enrolledCourseIds: string[] = [];
+            const coursesSnapshot = await getDocs(collection(db, "courses"));
+            for (const courseDoc of coursesSnapshot.docs) {
+                const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", user.uid));
+                const enrollmentSnapshot = await getDocs(enrollmentQuery);
+                if (!enrollmentSnapshot.empty) {
+                    enrolledCourseIds.push(courseDoc.id);
+                }
+            }
+
             let deadlines: UpcomingDeadline[] = [];
-            if (enrolledCoursesCodes.length > 0) {
-                const assignmentsQuery = query(collection(db, "assignments"), where("course", "in", enrolledCoursesCodes));
+            if (enrolledCourseIds.length > 0) {
+                const assignmentsQuery = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
                 const assignmentsSnapshot = await getDocs(assignmentsQuery);
                 deadlines = assignmentsSnapshot.docs
-                    .map(doc => ({
-                        id: doc.id,
-                        title: doc.data().title,
-                        course: doc.data().course,
-                        due: formatDistanceToNow(doc.data().dueDate.toDate(), { addSuffix: true }),
-                    }))
-                    .sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()); // This sort is approximate
+                    .map(doc => {
+                        const data = doc.data();
+                        const dueDate = data.dueDate.toDate();
+                        return {
+                            id: doc.id,
+                            title: data.title,
+                            course: data.course,
+                            due: formatDistanceToNow(dueDate, { addSuffix: true }),
+                            dueDate: dueDate,
+                        };
+                    })
+                    .filter(d => d.dueDate > new Date()) // Only show upcoming deadlines
+                    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()); // Sort by soonest
             }
             
             // In a real app, recent grades would be another query
             const recentGradesCount = 0;
 
             setStats({
-                courses: enrolledCoursesCodes.length,
+                courses: enrolledCourseIds.length,
                 deadlines: deadlines.length,
                 grades: recentGradesCount,
             });
@@ -78,6 +88,9 @@ export default function StudentDashboardPage() {
 
       } else {
         setIsLoading(false);
+        setUserName("Student");
+        setStats({ courses: 0, deadlines: 0, grades: 0 });
+        setUpcomingDeadlines([]);
       }
     });
     return () => unsubscribe();
@@ -137,7 +150,6 @@ export default function StudentDashboardPage() {
                     <h3 className="font-semibold">{item.title} <span className="text-muted-foreground font-normal">- {item.course}</span></h3>
                     <span className="text-sm text-muted-foreground">{item.due}</span>
                     </div>
-                    <Progress value={10} className="h-2" />
                 </div>
                 ))}
             </div>
