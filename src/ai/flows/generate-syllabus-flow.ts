@@ -11,7 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const GenerateSyllabusInputSchema = z.object({
+const GenerateSyllabusInputSchema = z.object({
   courseTitle: z.string().describe('The title of the course.'),
   learningObjectives: z.string().describe('A list of learning objectives, likely separated by newlines.'),
   additionalDetails: z.string().optional().describe('Any other relevant details like textbooks, course duration, or prerequisites.'),
@@ -19,7 +19,7 @@ export const GenerateSyllabusInputSchema = z.object({
 export type GenerateSyllabusInput = z.infer<typeof GenerateSyllabusInputSchema>;
 
 
-export const GenerateSyllabusOutputSchema = z.object({
+const GenerateSyllabusOutputSchema = z.object({
   syllabusContent: z.string().describe('The full syllabus content in Markdown format.'),
 });
 export type GenerateSyllabusOutput = z.infer<typeof GenerateSyllabusOutputSchema>;
