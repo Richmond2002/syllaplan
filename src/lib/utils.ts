@@ -7,7 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Calculates a student's current level based on their index number.
- * e.g., 'PS/ITC/21/0001' with current year 2024 results in level 400.
+ * Assumes an academic year starts around August.
+ * e.g., 'PS/ITC/21/0001' for the 2021-2022 academic year.
+ * In the 2024-2025 academic year, this student would be in Level 400.
  * @param indexNumber The student's full index number.
  * @returns The calculated level (100, 200, 300, 400).
  */
@@ -26,19 +28,21 @@ export function calculateStudentLevel(indexNumber: string): number {
     return 100; // Invalid year suffix
   }
 
-  const enrollmentYear = parseInt(`20${yearSuffix}`, 10);
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth(); // 0-11 for Jan-Dec
-
-  // Assuming academic year starts around August (index 7)
-  const academicYearAdjustment = currentMonth < 7 ? -1 : 0;
-  const academicYear = currentYear + academicYearAdjustment;
-
-  const yearsSinceEnrollment = academicYear - enrollmentYear;
-
-  let level = (yearsSinceEnrollment * 100) + 100;
+  const enrollmentStartYear = parseInt(`20${yearSuffix}`, 10);
+  const currentJsDate = new Date();
+  const currentMonth = currentJsDate.getMonth(); // 0-11 for Jan-Dec
+  const currentYear = currentJsDate.getFullYear();
   
-  // Cap the level at 400
+  // An academic year typically starts in August (month index 7).
+  // If we are before August, we are still in the previous academic year.
+  // For example, in May 2024, we are still in the 2023-2024 academic year.
+  const currentAcademicYearStart = currentMonth >= 7 ? currentYear : currentYear - 1;
+
+  const academicYearsCompleted = currentAcademicYearStart - enrollmentStartYear;
+
+  let level = (academicYearsCompleted * 100) + 100;
+  
+  // Cap the level at 400 and handle edge cases
   if (level > 400) {
     level = 400;
   }
