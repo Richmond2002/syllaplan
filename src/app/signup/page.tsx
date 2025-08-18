@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc, getDoc, runTransaction, query, where, getDocs } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc, getDoc, runTransaction, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, GraduationCap, User, Building, Mail, Lock } from "lucide-react";
@@ -39,44 +39,51 @@ export default function SignupPage() {
     try {
       if (role === 'student') {
         indexNumber = (form.elements.namedItem("indexNumber") as HTMLInputElement).value.toUpperCase();
-        
+        email = `${indexNumber.replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
+      } else { // Lecturer
+        email = (form.elements.namedItem("email") as HTMLInputElement).value;
+      }
+
+      // Check if user or student already exists before creating auth user
+      const userQuery = query(collection(db, "users"), where("email", "==", email));
+      const userSnapshot = await getDocs(userQuery);
+      if (!userSnapshot.empty) {
+        throw new Error("This email or index number is already registered.");
+      }
+
+      if (role === 'student') {
         const studentQuery = query(collection(db, "students"), where("indexNumber", "==", indexNumber));
         const studentSnapshot = await getDocs(studentQuery);
         if (!studentSnapshot.empty) {
             throw new Error("This index number is already registered.");
         }
-        email = `${indexNumber.replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
-
-      } else { // Lecturer
-        email = (form.elements.namedItem("email") as HTMLInputElement).value;
       }
       
-      const userDocRef = doc(db, "users", email);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        throw new Error("auth/email-already-in-use");
-      }
-
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
       if (user) {
         await updateProfile(user, { displayName });
 
-        await setDoc(doc(db, "users", email), {
+        const batch = writeBatch(db);
+
+        // 1. Create user role document
+        const userDocRef = doc(db, "users", user.email!);
+        batch.set(userDocRef, {
           uid: user.uid,
           email: user.email,
           role: role,
           ...(role === 'student' && { indexNumber: indexNumber }),
         });
 
+        // 2. Create student or lecturer profile document
         if (role === 'student') {
             const department = indexNumber.split('/')[0];
             const program = indexNumber.split('/')[1];
             const yearSuffix = indexNumber.split('/')[2];
             const enrollmentYear = `20${yearSuffix}`;
-
-            await addDoc(collection(db, "students"), {
+            const studentDocRef = doc(collection(db, "students"));
+            batch.set(studentDocRef, {
                 uid: user.uid,
                 name: displayName,
                 email: user.email,
@@ -86,10 +93,10 @@ export default function SignupPage() {
                 indexNumber,
                 createdAt: serverTimestamp(),
             });
-
         } else if (role === 'lecturer') {
             const department = (form.elements.namedItem("department") as HTMLInputElement).value;
-            await addDoc(collection(db, "lecturers"), {
+            const lecturerDocRef = doc(collection(db, "lecturers"));
+            batch.set(lecturerDocRef, {
                 uid: user.uid,
                 name: displayName,
                 email: user.email,
@@ -99,6 +106,8 @@ export default function SignupPage() {
                 createdAt: serverTimestamp(),
             });
         }
+        
+        await batch.commit();
       }
 
       toast({
@@ -108,10 +117,12 @@ export default function SignupPage() {
       router.push(role === "student" ? "/student" : "/lecturer");
 
     } catch (error: any) {
-      console.error(error);
+      console.error("Signup Error:", error);
       let description = error.message || "An unexpected error occurred. Please try again.";
-      if (error.code === "auth/email-already-in-use" || description.includes("auth/email-already-in-use")) {
+      if (error.code === "auth/email-already-in-use" || description.includes("already registered")) {
         description = "This email or index number is already in use by another account.";
+      } else if (error.code === "auth/weak-password") {
+        description = "Password is too weak. Please choose a stronger password.";
       }
       toast({
         title: "Signup Failed",
@@ -125,7 +136,6 @@ export default function SignupPage() {
 
   return (
     <div className="w-full max-w-md">
-      {/* Header Section */}
       <div className="text-center mb-8">
         <div className="flex justify-center mb-6">
           <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg">
@@ -136,7 +146,6 @@ export default function SignupPage() {
         <p className="text-gray-600">Join SyllaPlan to get started</p>
       </div>
 
-      {/* Signup Card */}
       <div className="bg-white shadow-xl rounded-2xl border border-gray-100">
         <div className="p-8">
           <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full">
@@ -190,7 +199,7 @@ export default function SignupPage() {
               </div>
               
               <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
-                {isLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
+                {isLoading ? <div className="flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing Up...</div> : "Create Account"}
               </button>
             </form>
           </Tabs>
