@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { MoreHorizontal, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, writeBatch, Timestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CreateLecturerDialog } from "./_components/create-lecturer-dialog";
@@ -31,6 +31,7 @@ export interface Lecturer {
   department: string;
   courses: number;
   status: "Active" | "On Sabbatical" | "Inactive";
+  createdAt: Timestamp;
 }
 
 export default function LecturersPage() {
@@ -45,7 +46,7 @@ export default function LecturersPage() {
     const { toast } = useToast();
 
     const fetchLecturers = useCallback(async () => {
-        setIsLoading(true);
+        // No need to set loading true here for refetches
         try {
             const q = query(collection(db, "lecturers"), orderBy("name", "asc"));
             const querySnapshot = await getDocs(q);
@@ -62,13 +63,30 @@ export default function LecturersPage() {
                 variant: "destructive",
             });
         } finally {
-            setIsLoading(false);
+            if (isLoading) setIsLoading(false);
         }
-    }, [db, toast]);
+    }, [db, toast, isLoading]);
 
     useEffect(() => {
         fetchLecturers();
-    }, [fetchLecturers]);
+    }, []); // Run only on initial mount
+
+    const handleLecturerCreated = (newLecturerData: Omit<Lecturer, 'id' | 'createdAt'>) => {
+        // Optimistically add the new lecturer to the UI
+        const optimisticLecturer: Lecturer = {
+            id: `temp-${Date.now()}`, // Temporary ID
+            createdAt: Timestamp.now(), // Temporary timestamp
+            ...newLecturerData,
+        };
+        setLecturers(prev => [...prev, optimisticLecturer].sort((a, b) => a.name.localeCompare(b.name)));
+        
+        // Refetch in the background to get the real data
+        fetchLecturers();
+    };
+
+    const handleLecturerUpdated = () => {
+        fetchLecturers();
+    }
 
     const handleEdit = (lecturer: Lecturer) => {
         setSelectedLecturer(lecturer);
@@ -123,7 +141,7 @@ export default function LecturersPage() {
                     <h1 className="text-3xl font-headline font-bold">Manage Lecturers</h1>
                     <p className="text-muted-foreground">View, add, or edit lecturer profiles.</p>
                 </div>
-                <CreateLecturerDialog onLecturerCreated={fetchLecturers} />
+                <CreateLecturerDialog onLecturerCreated={handleLecturerCreated} />
             </div>
             <Card>
                 <CardContent className="pt-6">
@@ -189,7 +207,7 @@ export default function LecturersPage() {
                 isOpen={isEditDialogOpen}
                 onOpenChange={setIsEditDialogOpen}
                 lecturer={selectedLecturer}
-                onLecturerUpdated={fetchLecturers}
+                onLecturerUpdated={handleLecturerUpdated}
             />
 
             <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>

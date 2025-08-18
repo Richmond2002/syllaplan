@@ -25,10 +25,11 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import type { Lecturer } from "../page";
 
 const lecturerSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -36,7 +37,7 @@ const lecturerSchema = z.object({
   department: z.string().min(1, "Department is required."),
 });
 
-export function CreateLecturerDialog({ onLecturerCreated }: { onLecturerCreated: () => void }) {
+export function CreateLecturerDialog({ onLecturerCreated }: { onLecturerCreated: (newLecturer: Omit<Lecturer, 'id' | 'createdAt'>) => void }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const db = getFirestore(app);
@@ -54,21 +55,43 @@ export function CreateLecturerDialog({ onLecturerCreated }: { onLecturerCreated:
 
   const onSubmit = async (values: z.infer<typeof lecturerSchema>) => {
     try {
-      await addDoc(collection(db, "lecturers"), {
+      const newLecturerData = {
         ...values,
-        courses: 0, // Default value
-        status: "Active",
+        courses: 0,
+        status: "Active" as const,
         createdAt: serverTimestamp(),
-      });
+      };
+      
+      // We don't wait for addDoc to finish before updating UI
+      addDoc(collection(db, "lecturers"), newLecturerData)
+        .then(() => {
+            // The onLecturerCreated callback will now handle the fetch
+        }).catch(error => {
+            console.error("Error creating lecturer: ", error);
+            toast({
+                title: "Error",
+                description: "Failed to save lecturer to the database. The list may be out of sync.",
+                variant: "destructive",
+            });
+        });
+
       toast({
         title: "Success",
         description: "Lecturer profile created successfully.",
       });
+
+      // Optimistic update
+      onLecturerCreated({
+        ...values,
+        courses: 0,
+        status: "Active",
+      });
+      
       form.reset();
-      onLecturerCreated();
       setOpen(false);
+
     } catch (error) {
-      console.error("Error creating lecturer: ", error);
+      console.error("Error preparing lecturer data: ", error);
       toast({
         title: "Error",
         description: "Failed to create lecturer. Please try again.",
