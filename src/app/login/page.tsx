@@ -27,17 +27,18 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    let email = identifier;
-    // Check if the identifier looks like an index number
+    let emailToAuth = identifier;
+    // Check if the identifier looks like an index number to create the auth email
     if (identifier.includes('/') && !identifier.includes('@')) {
-      email = `${identifier.toUpperCase().replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
+      emailToAuth = `${identifier.toUpperCase().replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, emailToAuth, password);
       const user = userCredential.user;
 
-      // Determine user role and redirect
+      // After successful authentication, user.email will be the correct, full email address.
+      // This is the key we must use to look up the role in the 'users' collection.
       const userDocRef = doc(db, "users", user.email!);
       const userDoc = await getDoc(userDocRef);
 
