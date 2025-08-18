@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -19,6 +20,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
+  const db = getFirestore(app);
   const { toast } = useToast();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -30,7 +32,6 @@ export default function SignupPage() {
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
     
-    // Firebase Auth stores a single displayName. We'll combine the names here.
     const displayName = `${firstName} ${lastName}`.trim();
 
     try {
@@ -38,6 +39,15 @@ export default function SignupPage() {
       
       if (userCredential.user) {
         await updateProfile(userCredential.user, { displayName });
+
+        if (role === 'student') {
+          await addDoc(collection(db, "students"), {
+            uid: userCredential.user.uid,
+            name: displayName,
+            email: userCredential.user.email,
+            createdAt: serverTimestamp(),
+          });
+        }
       }
 
       toast({

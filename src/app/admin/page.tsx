@@ -22,7 +22,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
     lecturers: 0,
     courses: 0,
-    students: 1234, // Static for now
+    students: 0,
   });
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,12 +35,13 @@ export default function AdminDashboardPage() {
       try {
         const lecturersSnapshot = await getDocs(collection(db, "lecturers"));
         const coursesSnapshot = await getDocs(collection(db, "courses"));
+        const studentsSnapshot = await getDocs(collection(db, "students"));
         
-        setStats(prevStats => ({
-          ...prevStats,
+        setStats({
           lecturers: lecturersSnapshot.size,
-          courses: coursesSnapshot.size, 
-        }));
+          courses: coursesSnapshot.size,
+          students: studentsSnapshot.size,
+        });
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
       } finally {
