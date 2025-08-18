@@ -41,7 +41,7 @@ import {
   writeBatch,
   doc,
   increment,
-  getDoc,
+  serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
@@ -225,7 +225,7 @@ export function EnrollStudentDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl h-auto md:h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-headline">
             Enroll Students in {course?.title}
@@ -386,3 +386,5 @@ export function EnrollStudentDialog({
     </Dialog>
   );
 }
+
+    
