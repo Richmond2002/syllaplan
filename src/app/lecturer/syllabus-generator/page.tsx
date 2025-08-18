@@ -8,53 +8,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Wand2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { generateSyllabus } from "@/ai/flows/generate-syllabus-flow";
+import { useToast } from "@/hooks/use-toast";
+import React from 'react';
+import { marked } from 'marked';
+
 
 export default function SyllabusGeneratorPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedSyllabus, setGeneratedSyllabus] = useState("");
+  const { toast } = useToast();
+
+  const [courseTitle, setCourseTitle] = useState("");
+  const [learningObjectives, setLearningObjectives] = useState("");
+  const [courseDetails, setCourseDetails] = useState("");
+
 
   const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsGenerating(true);
     setGeneratedSyllabus("");
     
-    // Mock AI generation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const form = e.currentTarget;
-    const courseTitle = (form.elements.namedItem("courseTitle") as HTMLInputElement)?.value;
-    
-    const mockSyllabus = `
-### Course Syllabus: ${courseTitle || "Introduction to Exampleology"}
-
-**Course Description:**
-An introductory course exploring the fundamental principles of Exampleology. Students will learn about the history, theory, and practical applications of examples in modern discourse.
-
-**Learning Objectives:**
-Upon successful completion of this course, students will be able to:
-1.  Define and explain the core concepts of Exampleology.
-2.  Analyze and critique the use of examples in various texts.
-3.  Construct effective and persuasive examples for written and oral arguments.
-4.  Understand the ethical implications of example usage.
-
-**Weekly Schedule:**
--   **Week 1:** Introduction to Exampleology
--   **Week 2:** The History of Examples
--   **Week 3:** Theoretical Frameworks
--   **Week 4:** Midterm Exam
--   **Week 5:** Practical Application in Science
--   **Week 6:** Examples in the Humanities
--   ...and so on for the remainder of the semester.
-
-**Assessment:**
--   Midterm Exam: 30%
--   Final Project: 40%
--   Weekly Quizzes: 20%
--   Participation: 10%
-    `;
-    setGeneratedSyllabus(mockSyllabus);
-    setIsGenerating(false);
+    try {
+      const result = await generateSyllabus({
+        courseTitle,
+        learningObjectives,
+        additionalDetails: courseDetails,
+      });
+      const htmlResult = await marked(result.syllabusContent);
+      setGeneratedSyllabus(htmlResult);
+    } catch (error) {
+       console.error(error);
+       toast({
+        title: "Error Generating Syllabus",
+        description: "There was an issue with the AI service. Please check your API key or try again later.",
+        variant: "destructive",
+       });
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   return (
@@ -68,7 +60,7 @@ Upon successful completion of this course, students will be able to:
           <form onSubmit={handleGenerate} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="courseTitle">Course Title</Label>
-              <Input id="courseTitle" name="courseTitle" placeholder="e.g., Introduction to Quantum Physics" required />
+              <Input id="courseTitle" name="courseTitle" placeholder="e.g., Introduction to Quantum Physics" required value={courseTitle} onChange={(e) => setCourseTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="learningObjectives">Learning Objectives</Label>
@@ -78,6 +70,8 @@ Upon successful completion of this course, students will be able to:
                 placeholder="List the key skills and knowledge students will acquire, one per line."
                 rows={5}
                 required
+                value={learningObjectives} 
+                onChange={(e) => setLearningObjectives(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -87,6 +81,8 @@ Upon successful completion of this course, students will be able to:
                 name="courseDetails"
                 placeholder="Include details like required textbooks, course duration, prerequisites, etc."
                 rows={3}
+                value={courseDetails}
+                onChange={(e) => setCourseDetails(e.target.value)}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isGenerating}>
@@ -121,9 +117,10 @@ Upon successful completion of this course, students will be able to:
             </div>
           )}
           {generatedSyllabus && (
-            <div className="prose prose-sm max-w-none rounded-md border bg-muted/50 p-4 whitespace-pre-wrap font-sans">
-                {generatedSyllabus}
-            </div>
+             <div
+              className="prose prose-sm dark:prose-invert max-w-none rounded-md border bg-muted/50 p-4"
+              dangerouslySetInnerHTML={{ __html: generatedSyllabus }}
+            />
           )}
           {!isGenerating && !generatedSyllabus && (
              <div className="flex items-center justify-center h-96 border-2 border-dashed rounded-lg">
