@@ -3,19 +3,74 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { app } from "@/lib/firebase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, GraduationCap, Mail, Lock } from "lucide-react";
+
+const HIDDEN_EMAIL_DOMAIN = "courseforge.app";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  const router = useRouter();
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Your Firebase authentication logic would go here
-    setTimeout(() => setIsLoading(false), 2000); // Remove this - just for demo
+
+    let email = identifier;
+    // Check if the identifier looks like an index number
+    if (identifier.includes('/') && !identifier.includes('@')) {
+      email = `${identifier.toUpperCase().replace(/\//g, '-')}@${HIDDEN_EMAIL_DOMAIN}`;
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Determine user role and redirect
+      const userDocRef = doc(db, "users", user.email!);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        toast({
+          title: "Login Successful",
+          description: "Redirecting to your dashboard...",
+        });
+        if (userData.role === 'admin') {
+          router.push("/admin");
+        } else if (userData.role === 'lecturer') {
+          router.push("/lecturer");
+        } else {
+          router.push("/student");
+        }
+      } else {
+         throw new Error("User role not found.");
+      }
+    } catch (error: any) {
+        console.error("Login error:", error);
+        let errorMessage = "Invalid credentials. Please check your email/index number and password.";
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            errorMessage = "Invalid credentials. Please try again.";
+        }
+        toast({
+            title: "Login Failed",
+            description: errorMessage,
+            variant: "destructive",
+        });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -27,18 +82,18 @@ export default function LoginPage() {
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-        <p className="text-gray-600">Sign in to access your account</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Welcome Back</h1>
+        <p className="text-gray-600 dark:text-gray-300">Sign in to access your account</p>
       </div>
 
       {/* Login Card */}
-      <div className="bg-white shadow-xl rounded-2xl border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl border border-gray-100 dark:border-gray-700">
         <div className="p-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Sign In
             </h2>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               Enter your credentials to continue
             </p>
           </div>
@@ -46,7 +101,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Email/Index Number Field */}
             <div className="space-y-2">
-              <label htmlFor="identifier" className="text-sm font-medium text-gray-700">
+              <label htmlFor="identifier" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email or Index Number
               </label>
               <div className="relative">
@@ -58,7 +113,7 @@ export default function LoginPage() {
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="you@example.com or PS/ITC/21/0001"
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none"
                 />
               </div>
             </div>
@@ -66,7 +121,7 @@ export default function LoginPage() {
             {/* Password Field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Password
                 </label>
                 <button
@@ -85,7 +140,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none"
+                  className="w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none"
                 />
                 <button
                   type="button"
@@ -117,16 +172,16 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-200" />
+              <span className="w-full border-t border-gray-200 dark:border-gray-600" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-3 text-gray-500">New here?</span>
+              <span className="bg-white dark:bg-gray-800 px-3 text-gray-500 dark:text-gray-400">New here?</span>
             </div>
           </div>
 
           {/* Sign Up Link */}
           <div className="text-center">
-            <span className="text-sm text-gray-600">Don't have an account? </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Don't have an account? </span>
             <Link
               href="/signup"
               className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
@@ -139,7 +194,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <div className="text-center mt-8">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>
