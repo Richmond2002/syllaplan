@@ -14,6 +14,7 @@ import {
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { useRouter } from "next/navigation";
+import { useSessionTimeout } from "@/hooks/use-session-timeout";
 
 import {
   SidebarProvider,
@@ -52,6 +53,7 @@ export default function StudentLayout({
   const router = useRouter();
   const auth = getAuth(app);
   const { toast } = useToast();
+  useSessionTimeout();
 
   const handleLogout = async () => {
     try {

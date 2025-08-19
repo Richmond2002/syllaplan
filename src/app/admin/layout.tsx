@@ -1,4 +1,6 @@
 
+"use client";
+
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -7,17 +9,21 @@ import {
   Settings,
   UserCircle,
 } from "lucide-react";
+import { getAuth, signOut } from "firebase/auth";
+import { app } from "@/lib/firebase/client";
+import { useRouter } from "next/navigation";
+import { useSessionTimeout } from "@/hooks/use-session-timeout";
 
 import {
   SidebarProvider,
   Sidebar,
-  SidebarHeader,
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
@@ -40,6 +46,22 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const auth = getAuth(app);
+  const { toast } = useToast();
+  useSessionTimeout();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged Out", description: "You have been successfully logged out." });
+      router.push("/login");
+    } catch (error: any) {
+      toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
+    }
+  };
+
+
   return (
     <SidebarProvider>
       <div className="flex h-screen flex-col">
@@ -76,7 +98,7 @@ export default function AdminLayout({
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
