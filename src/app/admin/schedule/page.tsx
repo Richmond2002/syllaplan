@@ -6,10 +6,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { getFirestore, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { getFirestore, collection, getDocs, query, Timestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { Loader2 } from 'lucide-react';
+import { CreateLectureDialog } from './_components/create-lecture-dialog';
 
 interface ScheduleEvent {
     id: string;
@@ -20,21 +20,17 @@ interface ScheduleEvent {
     location?: string;
 }
 
-export default function SchedulePage() {
+export default function AdminSchedulePage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const fetchScheduleData = useCallback(async (user: User) => {
+    const fetchScheduleData = useCallback(async () => {
         setIsLoading(true);
         try {
-            // Fetch assignments created by this lecturer
-            const assignmentsQuery = query(
-                collection(db, "assignments"),
-                where("lecturerId", "==", user.uid)
-            );
+            // Fetch assignments
+            const assignmentsQuery = query(collection(db, "assignments"));
             const assignmentsSnapshot = await getDocs(assignmentsQuery);
             const assignmentsData = assignmentsSnapshot.docs.map(doc => {
                 const data = doc.data();
@@ -47,11 +43,8 @@ export default function SchedulePage() {
                 };
             });
 
-            // Fetch lectures assigned to this lecturer
-            const lecturesQuery = query(
-                collection(db, "lectures"),
-                where("lecturerId", "==", user.uid)
-            );
+            // Fetch lectures
+            const lecturesQuery = query(collection(db, "lectures"));
             const lecturesSnapshot = await getDocs(lecturesQuery);
             const lecturesData = lecturesSnapshot.docs.map(doc => {
                  const data = doc.data();
@@ -74,15 +67,8 @@ export default function SchedulePage() {
     }, [db]);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                await fetchScheduleData(user);
-            } else {
-                setIsLoading(false);
-            }
-        });
-        return () => unsubscribe();
-    }, [auth, fetchScheduleData]);
+        fetchScheduleData();
+    }, [fetchScheduleData]);
 
     const eventsForSelectedDate = date 
         ? events.filter(event => format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')).sort((a,b) => a.date.getTime() - b.date.getTime())
@@ -94,9 +80,10 @@ export default function SchedulePage() {
         <div className="space-y-8">
             <div className="flex items-center justify-between">
                  <div>
-                    <h1 className="text-3xl font-headline font-bold">My Schedule</h1>
-                    <p className="text-muted-foreground">An overview of your scheduled lectures and assignment deadlines.</p>
+                    <h1 className="text-3xl font-headline font-bold">Platform Schedule</h1>
+                    <p className="text-muted-foreground">Manage the master schedule for all courses.</p>
                 </div>
+                <CreateLectureDialog onLectureCreated={fetchScheduleData} />
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1 flex justify-center items-center">
@@ -127,7 +114,7 @@ export default function SchedulePage() {
                         </CardTitle>
                         <CardDescription>
                             {eventsForSelectedDate.length > 0 
-                                ? `You have ${eventsForSelectedDate.length} event(s) scheduled.`
+                                ? `${eventsForSelectedDate.length} event(s) scheduled across all courses.`
                                 : 'No events scheduled for this day.'}
                         </CardDescription>
                     </CardHeader>

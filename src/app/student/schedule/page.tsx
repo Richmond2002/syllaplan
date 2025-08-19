@@ -12,10 +12,12 @@ import { app } from "@/lib/firebase/client";
 import { Loader2 } from 'lucide-react';
 
 interface ScheduleEvent {
+    id: string;
     date: Date;
-    type: 'assignment';
+    type: 'assignment' | 'lecture';
     title: string;
     course: string;
+    location?: string;
 }
 
 export default function StudentSchedulePage() {
@@ -25,33 +27,58 @@ export default function StudentSchedulePage() {
     const auth = getAuth(app);
     const db = getFirestore(app);
     
-    const fetchStudentAssignments = useCallback(async (user: User) => {
-        // Find enrolled course IDs
-        const enrolledCourseIds: string[] = [];
-        const coursesSnapshot = await getDocs(collection(db, "courses"));
-        for (const courseDoc of coursesSnapshot.docs) {
-            const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", user.uid));
-            const enrollmentSnapshot = await getDocs(enrollmentQuery);
-            if (!enrollmentSnapshot.empty) {
-                enrolledCourseIds.push(courseDoc.id);
+    const fetchStudentSchedule = useCallback(async (user: User) => {
+        setIsLoading(true);
+        try {
+            // Find enrolled course IDs
+            const enrolledCourseIds: string[] = [];
+            const coursesSnapshot = await getDocs(collection(db, "courses"));
+            for (const courseDoc of coursesSnapshot.docs) {
+                const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", user.uid));
+                const enrollmentSnapshot = await getDocs(enrollmentQuery);
+                if (!enrollmentSnapshot.empty) {
+                    enrolledCourseIds.push(courseDoc.id);
+                }
             }
-        }
-        
-        if (enrolledCourseIds.length > 0) {
-            const assignmentsQuery = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
-            const querySnapshot = await getDocs(assignmentsQuery);
-            const assignmentsData = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    date: (data.dueDate as Timestamp).toDate(),
-                    type: 'assignment' as const,
-                    title: data.title,
-                    course: data.course,
-                };
-            });
-            setEvents(assignmentsData);
-        } else {
-            setEvents([]);
+            
+            if (enrolledCourseIds.length > 0) {
+                // Fetch assignments for those courses
+                const assignmentsQuery = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
+                const assignmentsSnapshot = await getDocs(assignmentsQuery);
+                const assignmentsData = assignmentsSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        date: (data.dueDate as Timestamp).toDate(),
+                        type: 'assignment' as const,
+                        title: `Due: ${data.title}`,
+                        course: data.course,
+                    };
+                });
+                
+                // Fetch lectures for those courses
+                const lecturesQuery = query(collection(db, "lectures"), where("courseId", "in", enrolledCourseIds));
+                const lecturesSnapshot = await getDocs(lecturesQuery);
+                const lecturesData = lecturesSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                       id: doc.id,
+                       date: (data.startTime as Timestamp).toDate(),
+                       type: 'lecture' as const,
+                       title: data.topic,
+                       course: data.courseName,
+                       location: data.location,
+                    }
+                });
+
+                setEvents([...assignmentsData, ...lecturesData]);
+            } else {
+                setEvents([]);
+            }
+        } catch (error) {
+            console.error("Error fetching student schedule:", error);
+        } finally {
+            setIsLoading(false);
         }
     }, [db]);
 
@@ -59,15 +86,16 @@ export default function StudentSchedulePage() {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                await fetchStudentAssignments(user);
+                await fetchStudentSchedule(user);
+            } else {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [auth, fetchStudentAssignments]);
+    }, [auth, fetchStudentSchedule]);
 
     const eventsForSelectedDate = date 
-        ? events.filter(event => format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+        ? events.filter(event => format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')).sort((a,b) => a.date.getTime() - b.date.getTime())
         : [];
     
     const eventDates = events.map(e => e.date);
@@ -119,19 +147,20 @@ export default function StudentSchedulePage() {
                             </div>
                         ) : eventsForSelectedDate.length > 0 ? (
                             <ul className="space-y-4">
-                                {eventsForSelectedDate.map((event, index) => (
-                                    <li key={index} className="flex items-start space-x-4 p-3 rounded-lg bg-muted/50">
+                                {eventsForSelectedDate.map((event) => (
+                                    <li key={event.id} className="flex items-start space-x-4 p-3 rounded-lg bg-muted/50">
                                         <div className="font-semibold text-lg text-primary">{format(event.date, 'p')}</div>
                                         <div className="flex-grow">
                                             <div className="flex justify-between items-center">
                                                 <p className="font-semibold">{event.title}</p>
                                                 <Badge 
-                                                    variant={event.type === 'assignment' ? 'default' : 'secondary'}
+                                                    variant={event.type === 'lecture' ? 'default' : 'secondary'}
                                                 >
                                                     {event.type}
                                                 </Badge>
                                             </div>
                                             <p className="text-sm text-muted-foreground">{event.course}</p>
+                                            {event.location && <p className="text-sm text-muted-foreground">Location: {event.location}</p>}
                                         </div>
                                     </li>
                                 ))}

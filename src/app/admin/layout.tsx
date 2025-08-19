@@ -8,7 +8,8 @@ import {
   BookOpen,
   Settings,
   UserCircle,
-  Loader2
+  Loader2,
+  Calendar,
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
@@ -41,6 +42,7 @@ const navItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard", tooltip: "Dashboard" },
   { href: "/admin/lecturers", icon: Users, label: "Lecturers", tooltip: "Lecturers" },
   { href: "/admin/courses", icon: BookOpen, label: "Courses", tooltip: "Courses" },
+  { href: "/admin/schedule", icon: Calendar, label: "Schedule", tooltip: "Schedule" },
   { href: "/admin/settings", icon: Settings, label: "Settings", tooltip: "Settings" },
 ];
 
