@@ -104,32 +104,32 @@ export default function LoginPage() {
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-6">
-          <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg">
+          <div className="p-3 bg-gradient-to-br from-primary to-accent rounded-2xl shadow-lg">
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Welcome Back</h1>
-        <p className="text-gray-600 dark:text-gray-300">Sign in to access your account</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Welcome Back</h1>
+        <p className="text-muted-foreground">Sign in to access your account</p>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl border border-gray-100 dark:border-gray-700">
+      <div className="bg-card shadow-xl rounded-2xl border">
         <div className="p-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <h2 className="text-2xl font-semibold text-foreground mb-2">
               Sign In
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               Enter your credentials to continue
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="identifier" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="identifier" className="text-sm font-medium text-foreground">
                 Email or Index Number
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <input
                   id="identifier"
                   name="identifier"
@@ -137,25 +137,25 @@ export default function LoginPage() {
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="you@example.com or PS/ITC/21/0001"
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none"
+                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-colors outline-none bg-background"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
                   Password
                 </label>
                 <button
                   type="button"
-                  className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
+                  className="text-sm text-primary hover:underline transition-colors"
                 >
                   Forgot password?
                 </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <input
                   id="password"
                   name="password"
@@ -163,12 +163,12 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none"
+                  className="w-full pl-10 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-colors outline-none bg-background"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -178,7 +178,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading || !identifier || !password}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -193,18 +193,18 @@ export default function LoginPage() {
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-200 dark:border-gray-600" />
+              <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-gray-800 px-3 text-gray-500 dark:text-gray-400">New here?</span>
+              <span className="bg-card px-3 text-muted-foreground">New here?</span>
             </div>
           </div>
 
           <div className="text-center">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Don't have an account? </span>
+            <span className="text-sm text-muted-foreground">Don't have an account? </span>
             <Link
               href="/signup"
-              className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
+              className="text-sm font-medium text-primary hover:underline transition-colors"
             >
               Create one now
             </Link>
@@ -213,7 +213,7 @@ export default function LoginPage() {
       </div>
 
       <div className="text-center mt-8">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>

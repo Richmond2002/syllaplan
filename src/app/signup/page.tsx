@@ -138,15 +138,15 @@ export default function SignupPage() {
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-6">
-          <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg">
+          <div className="p-3 bg-gradient-to-br from-primary to-accent rounded-2xl shadow-lg">
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Your Account</h1>
-        <p className="text-gray-600">Join SyllaPlan to get started</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Create Your Account</h1>
+        <p className="text-muted-foreground">Join CourseForge to get started</p>
       </div>
 
-      <div className="bg-white shadow-xl rounded-2xl border border-gray-100">
+      <div className="bg-card shadow-xl rounded-2xl border">
         <div className="p-8">
           <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -156,35 +156,35 @@ export default function SignupPage() {
           
             <form onSubmit={handleSignup} className="space-y-6 mt-8">
               <div className="space-y-2">
-                <label htmlFor="fullName" className="text-sm font-medium text-gray-700">Full Name</label>
+                <label htmlFor="fullName" className="text-sm font-medium text-foreground">Full Name</label>
                 <div className="relative">
-                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                   <input id="fullName" name="fullName" placeholder="John Doe" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                   <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                   <input id="fullName" name="fullName" placeholder="John Doe" required className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-colors outline-none bg-background" />
                 </div>
               </div>
              
               {role === 'student' ? (
                 <div className="space-y-2">
-                    <label htmlFor="indexNumber" className="text-sm font-medium text-gray-700">Index Number</label>
+                    <label htmlFor="indexNumber" className="text-sm font-medium text-foreground">Index Number</label>
                      <div className="relative">
-                        <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                        <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <input id="indexNumber" name="indexNumber" placeholder="PS/ITC/21/0001" required className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-colors outline-none bg-background" />
                     </div>
                 </div>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+                    <label htmlFor="email" className="text-sm font-medium text-foreground">Email</label>
                     <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <input id="email" name="email" type="email" placeholder="you@example.com" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <input id="email" name="email" type="email" placeholder="you@example.com" required className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-colors outline-none bg-background" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="department" className="text-sm font-medium text-gray-700">Department</label>
+                    <label htmlFor="department" className="text-sm font-medium text-foreground">Department</label>
                      <div className="relative">
-                        <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <input id="department" name="department" placeholder="e.g. Computer Science" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                        <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <input id="department" name="department" placeholder="e.g. Computer Science" className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-colors outline-none bg-background" />
                     </div>
                   </div>
                 </>
@@ -193,12 +193,12 @@ export default function SignupPage() {
               <div className="space-y-2">
                 <label htmlFor="password">Password</label>
                 <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <input id="password" name="password" type="password" required className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors outline-none" />
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <input id="password" name="password" type="password" required className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-colors outline-none bg-background" />
                 </div>
               </div>
               
-              <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
+              <button type="submit" className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
                 {isLoading ? <div className="flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing Up...</div> : "Create Account"}
               </button>
             </form>
@@ -206,16 +206,16 @@ export default function SignupPage() {
 
           <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-200" />
+                <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-3 text-gray-500">OR</span>
+                <span className="bg-card px-3 text-muted-foreground">OR</span>
               </div>
             </div>
 
             <div className="text-center">
-              <span className="text-sm text-gray-600">Already have an account? </span>
-              <Link href="/login" className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors">
+              <span className="text-sm text-muted-foreground">Already have an account? </span>
+              <Link href="/login" className="text-sm font-medium text-primary hover:underline transition-colors">
                 Log In
               </Link>
             </div>

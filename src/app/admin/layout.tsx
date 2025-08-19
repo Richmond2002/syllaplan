@@ -42,8 +42,8 @@ export default function AdminLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
+      <div className="flex h-screen flex-col">
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2 font-bold">
                <svg
@@ -58,7 +58,7 @@ export default function AdminLayout({
               >
                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
               </svg>
-              <h1 className="font-headline text-lg font-semibold">SyllaPlan</h1>
+              <h1 className="font-headline text-lg font-semibold">CourseForge</h1>
             </Link>
           </div>
           <div className="flex items-center gap-4">
@@ -98,7 +98,7 @@ export default function AdminLayout({
               </SidebarMenu>
             </SidebarContent>
           </Sidebar>
-          <div className="flex flex-1 flex-col overflow-auto">
+          <div className="flex flex-1 flex-col overflow-y-auto">
             <main className="flex-1 p-6">{children}</main>
           </div>
         </div>
