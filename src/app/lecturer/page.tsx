@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, query, where, getDocs, Timestamp, orderBy, limit } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,9 +13,9 @@ import { format } from "date-fns";
 
 interface Lecture {
   id: string;
-  course: string;
+  courseName: string;
   topic: string;
-  time: Timestamp;
+  startTime: Timestamp;
   location: string;
 }
 
@@ -48,11 +48,21 @@ export default function LecturerDashboardPage() {
           // Fetch assignments needing grading (mock for now, as submissions aren't built)
           const assignmentsToGradeCount = 0; // Replace with real query later
 
-          // Fetch upcoming lectures (mock for now, as schedule isn't fully built)
-          const lecturesData: Lecture[] = [
-            { id: '1', course: "Advanced Algorithms", topic: "Dynamic Programming", time: Timestamp.fromDate(new Date(Date.now() + 86400000)), location: "Room 301" },
-            { id: '2', course: "Quantum Physics 101", topic: "Wave-particle Duality", time: Timestamp.fromDate(new Date(Date.now() + 86400000 * 2)), location: "Physics Hall A" },
-          ];
+          // Fetch upcoming lectures
+          const now = new Date();
+          const lecturesQuery = query(
+            collection(db, "lectures"),
+            where("lecturerId", "==", currentUser.uid),
+            where("startTime", ">=", now),
+            orderBy("startTime", "asc"),
+            limit(2)
+          );
+          const lecturesSnapshot = await getDocs(lecturesQuery);
+          const lecturesData = lecturesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Lecture[];
+
 
           setStats({
             courses: courseCount,
@@ -121,6 +131,11 @@ export default function LecturerDashboardPage() {
              <div className="flex justify-center items-center h-48">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : upcomingLectures.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+                <p>No upcoming lectures scheduled.</p>
+                <p className="text-sm">You can add new lectures from the Schedule page.</p>
+            </div>
           ) : (
           <Table>
             <TableHeader>
@@ -134,9 +149,9 @@ export default function LecturerDashboardPage() {
             <TableBody>
               {upcomingLectures.map((lecture) => (
                 <TableRow key={lecture.id}>
-                  <TableCell className="font-medium">{lecture.course}</TableCell>
+                  <TableCell className="font-medium">{lecture.courseName}</TableCell>
                   <TableCell>{lecture.topic}</TableCell>
-                  <TableCell>{format(lecture.time.toDate(), 'PPp')}</TableCell>
+                  <TableCell>{format(lecture.startTime.toDate(), 'PPp')}</TableCell>
                   <TableCell>
                     <Badge variant={lecture.location === "Online" ? "default" : "secondary"}>
                       {lecture.location}
