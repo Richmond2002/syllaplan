@@ -23,6 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -70,7 +71,8 @@ export default function LecturerLayout({
       <div className="flex h-screen flex-col">
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-             <Link href="/" className="flex items-center gap-2 font-bold">
+            <SidebarTrigger />
+            <Link href="/" className="flex items-center gap-2 font-bold">
               <svg
                 className="size-6 text-primary"
                 xmlns="http://www.w3.org/2000/svg"

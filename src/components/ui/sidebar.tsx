@@ -9,17 +9,13 @@ import { PanelLeft } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-
 
 type SidebarContext = {
   isMobile: boolean
@@ -43,7 +39,6 @@ const SidebarProvider = React.forwardRef<
   (
     {
       className,
-      style,
       children,
       ...props
     },
@@ -87,6 +82,39 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
+    const { isMobile } = useSidebar();
+    const [isOpen, setIsOpen] = React.useState(false);
+
+    if (isMobile) {
+        return (
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetContent side="left" className="p-0 pt-12 w-64">
+                    <div
+                        data-sidebar="sidebar"
+                        className={cn(
+                            "group flex h-full flex-col bg-sidebar text-sidebar-foreground",
+                        )}
+                    >
+                        {React.Children.map(children, (child) => {
+                          if (React.isValidElement(child)) {
+                            return React.cloneElement(child, {
+                              // @ts-ignore
+                              onClick: (e: React.MouseEvent<HTMLElement>) => {
+                                if (e.target instanceof HTMLAnchorElement && e.target.href) {
+                                  setIsOpen(false);
+                                }
+                              }
+                            });
+                          }
+                          return child;
+                        })}
+                    </div>
+                </SheetContent>
+            </Sheet>
+        );
+    }
+
+
     return (
       <aside
         ref={ref}
@@ -106,7 +134,7 @@ Sidebar.displayName = "Sidebar"
 
 const SidebarContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div">
+  React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
   return (
     <div
@@ -226,12 +254,21 @@ const SidebarMenuButton = React.forwardRef<
 )
 SidebarMenuButton.displayName = "SidebarMenuButton"
 
-
-// Other exports - keeping them in case they are used somewhere else, but they are not part of the primary fixed sidebar.
 const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
->(() => null);
+>((props, ref) => {
+    const { isMobile } = useSidebar();
+    if (!isMobile) return null;
+    return (
+        <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" ref={ref} {...props}>
+                <PanelLeft />
+                <span className="sr-only">Toggle Menu</span>
+            </Button>
+        </SheetTrigger>
+    )
+});
 SidebarTrigger.displayName = "SidebarTrigger"
 
 const SidebarHeader = React.forwardRef<
@@ -257,5 +294,6 @@ export {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarTrigger,
   useSidebar
 }
