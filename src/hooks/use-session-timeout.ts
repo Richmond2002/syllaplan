@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
 import { app } from '@/lib/firebase/client';
 
-const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 export function useSessionTimeout() {
   const router = useRouter();

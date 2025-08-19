@@ -8,11 +8,13 @@ import {
   BookOpen,
   Settings,
   UserCircle,
+  Loader2
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { useRouter } from "next/navigation";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 import {
   SidebarProvider,
@@ -50,6 +52,7 @@ export default function AdminLayout({
   const router = useRouter();
   const auth = getAuth(app);
   const { toast } = useToast();
+  const { loading } = useAuthGuard();
   useSessionTimeout();
 
   const handleLogout = async () => {
@@ -62,6 +65,13 @@ export default function AdminLayout({
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>

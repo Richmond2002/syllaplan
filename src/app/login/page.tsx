@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,24 @@ export default function LoginPage() {
   const auth = getAuth(app);
   const db = getFirestore(app);
   const { toast } = useToast();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, redirect them to their dashboard
+        const userDocRef = doc(db, "users", user.email!);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const { role } = userDoc.data();
+          if (role === 'admin') router.push('/admin');
+          else if (role === 'lecturer') router.push('/lecturer');
+          else router.push('/student');
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [auth, db, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,34 +72,34 @@ export default function LoginPage() {
       }
 
       const userDocRef = doc(db, "users", user.email!);
-      const userDoc = await getDoc(userDocRef);
+      let userDoc = await getDoc(userDocRef);
 
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        toast({
-          title: "Login Successful",
-          description: "Redirecting to your dashboard...",
+      // This block handles fixing older accounts that are missing a user role doc
+      if (!userDoc.exists()) {
+        const role = user.email?.endsWith(HIDDEN_EMAIL_DOMAIN) ? 'student' : 'lecturer';
+        await setDoc(userDocRef, {
+          uid: user.uid,
+          email: user.email,
+          role: role,
         });
-        if (userData.role === 'lecturer') {
-          router.push("/lecturer");
-        } else {
-          router.push("/student");
-        }
-      } else {
-        // This is a fallback for older lecturer accounts that might be missing a role doc.
-        // It assumes anyone who isn't an admin or a student (with a hidden domain) is a lecturer.
-        if (!user.email?.endsWith(HIDDEN_EMAIL_DOMAIN)) {
-            await setDoc(userDocRef, {
-                uid: user.uid,
-                email: user.email,
-                role: 'lecturer',
-            });
-            toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
-            router.push("/lecturer");
-        } else {
-            throw new Error("User role not found for student.");
-        }
+        userDoc = await getDoc(userDocRef); // Re-fetch the doc after creating it
       }
+      
+      const userData = userDoc.data();
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to your dashboard...",
+      });
+
+      if (userData?.role === 'lecturer') {
+        router.push("/lecturer");
+      } else if (userData?.role === 'student') {
+        router.push("/student");
+      } else {
+         // Fallback just in case
+         throw new Error("Could not determine user role for redirection.");
+      }
+
     } catch (error: any) {
         console.error("Login error:", error);
         let errorMessage = "Invalid credentials. Please check your email/index number and password.";
