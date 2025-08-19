@@ -1,21 +1,25 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Wand2 } from "lucide-react";
+import { Loader2, Wand2, Download } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { generateLecturePlan, type GenerateLecturePlanOutput } from "@/ai/flows/generate-lecture-plan-flow";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function LecturePlannerPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<GenerateLecturePlanOutput | null>(null);
   const { toast } = useToast();
+  const [lectureTopic, setLectureTopic] = useState("");
+  const planRef = useRef<HTMLDivElement>(null);
 
   const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,13 +27,14 @@ export default function LecturePlannerPage() {
     setGeneratedPlan(null);
     
     const formData = new FormData(e.currentTarget);
-    const lectureTopic = formData.get("lectureTopic") as string;
+    const topic = formData.get("lectureTopic") as string;
     const learningObjectives = formData.get("learningObjectives") as string;
     const duration = parseInt(formData.get("duration") as string, 10);
+    setLectureTopic(topic);
 
     try {
         const result = await generateLecturePlan({
-            topic: lectureTopic,
+            topic: topic,
             objectives: learningObjectives,
             duration,
         });
@@ -44,6 +49,37 @@ export default function LecturePlannerPage() {
     } finally {
         setIsGenerating(false);
     }
+  };
+  
+  const handleExport = () => {
+    if (!planRef.current) return;
+
+    html2canvas(planRef.current).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const ratio = canvasWidth / canvasHeight;
+      let imgWidth = pdfWidth;
+      let imgHeight = pdfWidth / ratio;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+      
+      pdf.save(`${lectureTopic || 'lecture-plan'}.pdf`);
+    });
   };
 
   return (
@@ -92,8 +128,16 @@ export default function LecturePlannerPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">Generated Lecture Plan</CardTitle>
-          <CardDescription>A suggested structure for your lecture. Expand each section for details.</CardDescription>
+            <div className="flex justify-between items-center">
+                <div>
+                    <CardTitle className="font-headline text-2xl">Generated Lecture Plan</CardTitle>
+                    <CardDescription>A suggested structure for your lecture. Expand each section for details.</CardDescription>
+                </div>
+                <Button onClick={handleExport} disabled={!generatedPlan || isGenerating} variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                </Button>
+            </div>
         </CardHeader>
         <CardContent>
           {isGenerating && (
@@ -104,6 +148,7 @@ export default function LecturePlannerPage() {
                 </div>
             </div>
           )}
+          <div ref={planRef} className="p-4">
           {generatedPlan && (
             <Accordion type="multiple" defaultValue={["introduction"]} className="w-full">
               {generatedPlan.sections.map((section, index) => (
@@ -118,6 +163,7 @@ export default function LecturePlannerPage() {
               ))}
             </Accordion>
           )}
+          </div>
           {!isGenerating && !generatedPlan && (
              <div className="flex items-center justify-center h-96 border-2 border-dashed rounded-lg">
                 <div className="text-center text-muted-foreground">
