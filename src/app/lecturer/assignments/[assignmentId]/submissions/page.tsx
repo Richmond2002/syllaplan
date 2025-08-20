@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, FileArchive, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -74,18 +74,31 @@ export default function SubmissionsPage() {
         fetchSubmissions();
     }, [fetchSubmissions]);
 
+    const handleBulkDownload = () => {
+        toast({
+            title: "Feature in development",
+            description: "Bulk downloading submissions as a ZIP file is not yet implemented.",
+        })
+    }
+
     return (
         <div className="space-y-8">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                    <h1 className="text-3xl font-headline font-bold">Student Submissions</h1>
-                    <p className="text-muted-foreground">
-                        {isLoading ? "Loading..." : `Viewing submissions for "${assignment?.title}" (${assignment?.course})`}
-                    </p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div>
+                        <h1 className="text-3xl font-headline font-bold">Student Submissions</h1>
+                        <p className="text-muted-foreground">
+                            {isLoading ? "Loading..." : `Viewing submissions for "${assignment?.title}" (${assignment?.course})`}
+                        </p>
+                    </div>
                 </div>
+                 <Button onClick={handleBulkDownload} disabled={submissions.length === 0}>
+                    <FileArchive className="mr-2 h-4 w-4" />
+                    Download All (ZIP)
+                </Button>
             </div>
             <Card>
                 <CardContent className="pt-6">
@@ -134,3 +147,4 @@ export default function SubmissionsPage() {
         </div>
     );
 }
+

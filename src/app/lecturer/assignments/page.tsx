@@ -41,13 +41,13 @@ const getStatusBadge = (status: string) => {
   switch (status) {
     case "Grading":
       return (
-        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+        <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
           {status}
         </Badge>
       );
     case "Open":
       return (
-        <Badge variant="secondary" className="bg-green-100 text-green-800">
+        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
           {status}
         </Badge>
       );
@@ -116,6 +116,11 @@ export default function AssignmentsPage() {
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : assignments.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground">
+              <p>You haven't created any assignments yet.</p>
+              <p className="text-sm">Click "Create Assignment" to get started.</p>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -171,3 +176,4 @@ export default function AssignmentsPage() {
     </div>
   );
 }
+

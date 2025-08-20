@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getFirestore, collection, getDocs, query, where, Timestamp, doc, getDoc, setDoc, serverTimestamp, increment } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where, Timestamp, doc, getDoc, setDoc, serverTimestamp, increment, writeBatch } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from "@/lib/firebase/client";
 import { format, formatDistanceToNow } from 'date-fns';
@@ -28,6 +28,11 @@ interface Assignment {
 
 export interface StudentAssignment extends Assignment {
   studentStatus: string;
+  submissionDetails?: {
+    fileURL: string;
+    submittedAt: Timestamp;
+    grade?: string;
+  }
 }
 
 const getStatusBadge = (status: string) => {
@@ -68,6 +73,7 @@ export default function StudentAssignmentsPage() {
             
             if (enrolledCourseIds.length === 0) {
                 setAssignments([]);
+                setIsLoading(false); // Make sure to stop loading
                 return;
             }
 
@@ -83,15 +89,22 @@ export default function StudentAssignmentsPage() {
                 const submissionSnapshot = await getDocs(submissionQuery);
 
                 let studentStatus = "Not Started";
+                let submissionDetails;
                 if (!submissionSnapshot.empty) {
                     const submissionData = submissionSnapshot.docs[0].data();
                     studentStatus = submissionData.grade ? "Graded" : "Submitted";
+                    submissionDetails = {
+                        fileURL: submissionData.fileURL,
+                        submittedAt: submissionData.submittedAt,
+                        grade: submissionData.grade,
+                    }
                 }
                 
                 return {
                     id: doc.id,
                     ...data,
                     studentStatus,
+                    submissionDetails,
                 } as StudentAssignment;
             });
 
@@ -131,15 +144,17 @@ export default function StudentAssignmentsPage() {
             const assignment = assignments.find(a => a.id === assignmentId);
             if (!assignment) throw new Error("Assignment not found");
 
-            // Upload file to storage
+            const batch = writeBatch(db);
+
+            // 1. Upload file to storage
             const filePath = `submissions/${assignment.courseId}/${currentUser.uid}/${file.name}`;
             const storageRef = ref(storage, filePath);
             const snapshot = await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
 
-            // Create submission document in Firestore
+            // 2. Create submission document in Firestore
             const submissionRef = doc(collection(db, `assignments/${assignmentId}/submissions`));
-            await setDoc(submissionRef, {
+            batch.set(submissionRef, {
                 studentId: currentUser.uid,
                 studentName: currentUser.displayName,
                 submittedAt: serverTimestamp(),
@@ -147,9 +162,11 @@ export default function StudentAssignmentsPage() {
                 grade: null,
             });
             
-            // Increment submissions count on assignment
+            // 3. Increment submissions count on assignment
             const assignmentRef = doc(db, "assignments", assignmentId);
-            await setDoc(assignmentRef, { submissions: increment(1) }, { merge: true });
+            batch.update(assignmentRef, { submissions: increment(1) });
+            
+            await batch.commit();
 
             toast({
                 title: "Success",

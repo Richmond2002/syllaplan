@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge }from "@/components/ui/badge";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, FileCheck, Clock } from "lucide-react";
 import { format } from "date-fns";
 import type { StudentAssignment } from "../page";
 import { useState } from "react";
@@ -58,6 +58,8 @@ export function ViewAssignmentDialog({
     await onAssignmentSubmitted(assignment.id, submissionFile);
     setIsSubmitting(false);
     onOpenChange(false);
+    // Reset file input after closing
+    setSubmissionFile(null);
   };
 
   const isSubmitted = assignment.studentStatus === 'Submitted' || assignment.studentStatus === 'Graded';
@@ -70,7 +72,7 @@ export function ViewAssignmentDialog({
           <DialogDescription>
             <div className="flex items-center gap-4 text-sm mt-2">
                 <Badge variant="outline">{assignment.course}</Badge>
-                <span>Due: {format(assignment.dueDate.toDate(), 'PPP')}</span>
+                <span>Due: {format(assignment.dueDate.toDate(), 'PPP p')}</span>
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -95,10 +97,26 @@ export function ViewAssignmentDialog({
                 </div>
             )}
             
-            {!isSubmitted && (
+            <hr/>
+            
+            {isSubmitted ? (
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <h3 className="font-semibold text-green-800 dark:text-green-300 flex items-center"><FileCheck className="mr-2"/>Your Submission</h3>
+                    <div className="text-sm mt-2 space-y-2">
+                        <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground"/> Submitted on: {format(assignment.submissionDetails!.submittedAt.toDate(), 'PPP p')}</p>
+                        <Button asChild variant="secondary" size="sm">
+                             <a href={assignment.submissionDetails!.fileURL} target="_blank" rel="noopener noreferrer">
+                                <Download className="mr-2 h-3 w-3" />
+                                Download Your Submission
+                            </a>
+                        </Button>
+                    </div>
+                </div>
+            ) : (
                 <div className="space-y-2">
                     <Label htmlFor="submission-file" className="font-semibold">Submit Your Work</Label>
                     <Input id="submission-file" type="file" onChange={handleFileChange} />
+                    <p className="text-xs text-muted-foreground">Please select the file you wish to submit.</p>
                 </div>
             )}
         </div>
@@ -107,13 +125,15 @@ export function ViewAssignmentDialog({
           <DialogClose asChild>
             <Button variant="outline">Close</Button>
           </DialogClose>
-          <Button 
-            onClick={handleSubmission}
-            disabled={isSubmitted || isSubmitting}
-          >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitted ? 'Submitted' : 'Submit Assignment'}
-          </Button>
+          {!isSubmitted && (
+            <Button 
+                onClick={handleSubmission}
+                disabled={isSubmitting || !submissionFile}
+            >
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit Assignment
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
