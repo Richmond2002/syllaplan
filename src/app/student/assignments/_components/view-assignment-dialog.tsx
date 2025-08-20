@@ -69,8 +69,8 @@ export function ViewAssignmentDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">{assignment.title}</DialogTitle>
-          <DialogDescription>
-            <div className="flex items-center gap-4 text-sm mt-2">
+          <DialogDescription asChild>
+            <div className="text-sm mt-2 space-x-4">
                 <Badge variant="outline">{assignment.course}</Badge>
                 <span>Due: {format(assignment.dueDate.toDate(), 'PPP p')}</span>
             </div>
