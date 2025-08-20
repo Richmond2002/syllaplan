@@ -5,11 +5,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, addDays, getDay, setHours, setMinutes } from 'date-fns';
 import { getFirestore, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { Loader2 } from 'lucide-react';
+
+interface ScheduleEntry {
+    day: string; // "Monday", "Tuesday", etc.
+    startTime: string; // "HH:mm"
+    endTime: string; // "HH:mm"
+}
+
+interface RecurringLecture {
+    id: string;
+    courseName: string;
+    location: string;
+    schedule: ScheduleEntry[];
+}
 
 interface ScheduleEvent {
     id: string;
@@ -19,6 +32,38 @@ interface ScheduleEvent {
     course: string;
     location?: string;
 }
+
+const weekdaysMap: { [key: string]: number } = { "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6 };
+
+// Generates lecture instances for the next 4 weeks from a recurring schedule
+const generateLectureInstances = (lecture: RecurringLecture): ScheduleEvent[] => {
+    const instances: ScheduleEvent[] = [];
+    const today = new Date();
+    const fourWeeksFromNow = addDays(today, 28);
+
+    lecture.schedule.forEach(slot => {
+        const targetDay = weekdaysMap[slot.day];
+        let current = today;
+        current = addDays(current, (targetDay - getDay(current) + 7) % 7);
+        
+        while (current <= fourWeeksFromNow) {
+            const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
+            const lectureDate = setMinutes(setHours(current, startHours), startMinutes);
+
+            instances.push({
+                id: `${lecture.id}-${format(lectureDate, 'yyyy-MM-dd')}`,
+                date: lectureDate,
+                type: 'lecture',
+                title: lecture.courseName,
+                course: lecture.courseName,
+                location: lecture.location,
+            });
+            current = addDays(current, 7);
+        }
+    });
+    return instances;
+};
+
 
 export default function StudentSchedulePage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
@@ -56,22 +101,17 @@ export default function StudentSchedulePage() {
                     };
                 });
                 
-                // Fetch lectures for those courses
+                // Fetch recurring lectures for those courses
                 const lecturesQuery = query(collection(db, "lectures"), where("courseId", "in", enrolledCourseIds));
                 const lecturesSnapshot = await getDocs(lecturesQuery);
-                const lecturesData = lecturesSnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                       id: doc.id,
-                       date: (data.startTime as Timestamp).toDate(),
-                       type: 'lecture' as const,
-                       title: data.topic,
-                       course: data.courseName,
-                       location: data.location,
-                    }
-                });
+                const recurringLectures = lecturesSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                })) as RecurringLecture[];
+                
+                const lectureInstances = recurringLectures.flatMap(generateLectureInstances);
 
-                setEvents([...assignmentsData, ...lecturesData]);
+                setEvents([...assignmentsData, ...lectureInstances]);
             } else {
                 setEvents([]);
             }

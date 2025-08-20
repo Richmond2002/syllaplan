@@ -21,20 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -48,16 +40,22 @@ import {
 } from "@/components/ui/form";
 import type { Course } from "../../courses/page";
 
-const lectureSchema = z.object({
-  courseId: z.string().min(1, "Please select a course."),
-  date: z.date({ required_error: "A date is required." }),
+const scheduleEntrySchema = z.object({
+  day: z.string(),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
-  location: z.string().min(1, "Location is required (e.g., 'Room 101' or 'Online')."),
 }).refine(data => data.endTime > data.startTime, {
     message: "End time must be after start time.",
     path: ["endTime"],
 });
+
+const lectureSchema = z.object({
+  courseId: z.string().min(1, "Please select a course."),
+  location: z.string().min(1, "Location is required (e.g., 'Room 101' or 'Online')."),
+  schedule: z.array(scheduleEntrySchema).min(1, "Please select at least one day for the lecture."),
+});
+
+const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: () => void }) {
   const [open, setOpen] = useState(false);
@@ -69,10 +67,14 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
     resolver: zodResolver(lectureSchema),
     defaultValues: {
       courseId: "",
-      startTime: "09:00",
-      endTime: "11:00",
       location: "",
+      schedule: [],
     }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "schedule",
   });
 
   const fetchCourses = useCallback(async () => {
@@ -93,6 +95,17 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
         fetchCourses();
     }
   }, [open, fetchCourses]);
+  
+  const handleDayCheckedChange = (checked: boolean, day: string) => {
+    if (checked) {
+        append({ day, startTime: "09:00", endTime: "11:00" });
+    } else {
+        const indexToRemove = fields.findIndex(field => field.day === day);
+        if (indexToRemove > -1) {
+            remove(indexToRemove);
+        }
+    }
+  }
 
   const { isSubmitting } = form.formState;
 
@@ -104,21 +117,12 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
     }
 
     try {
-      const [startHours, startMinutes] = values.startTime.split(':').map(Number);
-      const startTime = new Date(values.date);
-      startTime.setHours(startHours, startMinutes, 0, 0);
-
-      const [endHours, endMinutes] = values.endTime.split(':').map(Number);
-      const endTime = new Date(values.date);
-      endTime.setHours(endHours, endMinutes, 0, 0);
-      
       await addDoc(collection(db, "lectures"), {
         courseId: values.courseId,
         courseName: `${selectedCourse.title} (${selectedCourse.code})`,
-        startTime: Timestamp.fromDate(startTime),
-        endTime: Timestamp.fromDate(endTime),
         location: values.location,
-        lecturerId: selectedCourse.lecturerId, // Assign lecture to the course's lecturer
+        lecturerId: selectedCourse.lecturerId,
+        schedule: values.schedule.sort((a, b) => weekdays.indexOf(a.day) - weekdays.indexOf(b.day)),
         createdAt: serverTimestamp(),
       });
 
@@ -147,13 +151,13 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
           Create Lecture
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-headline">
             Schedule New Lecture
           </DialogTitle>
           <DialogDescription>
-            Fill out the details to add a new lecture to the schedule for any course.
+            Fill out the details to add a new recurring weekly lecture to the schedule.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -180,70 +184,6 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                  <FormLabel>Day</FormLabel>
-                  <Popover>
-                      <PopoverTrigger asChild>
-                      <FormControl>
-                          <Button
-                          variant={"outline"}
-                          className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                          )}
-                          >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : <span>Pick a day</span>}
-                          </Button>
-                      </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                      />
-                      </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                  </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Start Time</FormLabel>
-                    <FormControl>
-                        <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                 <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>End Time</FormLabel>
-                    <FormControl>
-                        <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
             
             <FormField
               control={form.control}
@@ -258,6 +198,58 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
                 </FormItem>
               )}
             />
+
+            <div className="space-y-4">
+                <FormLabel>Weekly Schedule</FormLabel>
+                <div className="space-y-4 rounded-md border p-4">
+                    {weekdays.map((day) => (
+                        <div key={day}>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={day}
+                                    checked={fields.some(field => field.day === day)}
+                                    onCheckedChange={(checked) => handleDayCheckedChange(!!checked, day)}
+                                />
+                                <label htmlFor={day} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    {day}
+                                </label>
+                            </div>
+                            {fields.map((field, index) => field.day === day && (
+                               <div key={field.id} className="grid grid-cols-2 gap-4 mt-2 pl-6">
+                                    <FormField
+                                        control={form.control}
+                                        name={`schedule.${index}.startTime`}
+                                        render={({ field: timeField }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs">Start Time</FormLabel>
+                                                <FormControl>
+                                                    <Input type="time" {...timeField} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                     <FormField
+                                        control={form.control}
+                                        name={`schedule.${index}.endTime`}
+                                        render={({ field: timeField }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs">End Time</FormLabel>
+                                                <FormControl>
+                                                    <Input type="time" {...timeField} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                               </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+                 <FormMessage>{form.formState.errors.schedule?.message}</FormMessage>
+            </div>
+
 
             <DialogFooter>
                <DialogClose asChild>

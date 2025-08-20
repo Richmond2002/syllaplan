@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MoreHorizontal, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { format } from 'date-fns';
 import { getFirestore, collection, getDocs, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { CreateLectureDialog } from './_components/create-lecture-dialog';
@@ -24,14 +23,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 
+interface ScheduleEntry {
+    day: string;
+    startTime: string;
+    endTime: string;
+}
+
 export interface Lecture {
     id: string;
     courseId: string;
     courseName: string;
-    startTime: Timestamp;
-    endTime?: Timestamp;
     location: string;
     lecturerId: string;
+    schedule: ScheduleEntry[];
 }
 
 export default function AdminSchedulePage() {
@@ -48,7 +52,7 @@ export default function AdminSchedulePage() {
     const fetchLectures = useCallback(async () => {
         setIsLoading(true);
         try {
-            const q = query(collection(db, "lectures"), orderBy("startTime", "asc"));
+            const q = query(collection(db, "lectures"), orderBy("courseName", "asc"));
             const querySnapshot = await getDocs(q);
             const lecturesData = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -94,14 +98,17 @@ export default function AdminSchedulePage() {
             setLectureToDelete(null);
         }
     };
+    
+    const formatTime = (time: string) => {
+        const [hours, minutes] = time.split(':');
+        const date = new Date();
+        date.setHours(Number(hours), Number(minutes));
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
 
-    const formatTimeRange = (start: Timestamp, end?: Timestamp) => {
-        const startTime = format(start.toDate(), 'p');
-        if (!end) {
-            return startTime;
-        }
-        const endTime = format(end.toDate(), 'p');
-        return `${startTime} - ${endTime}`;
+    const formatSchedule = (schedule: ScheduleEntry[]) => {
+        if (!schedule || schedule.length === 0) return "Not scheduled";
+        return schedule.map(s => `${s.day.substring(0,3)}: ${formatTime(s.startTime)} - ${formatTime(s.endTime)}`).join(', ');
     }
 
     return (
@@ -109,7 +116,7 @@ export default function AdminSchedulePage() {
             <div className="flex items-center justify-between">
                  <div>
                     <h1 className="text-3xl font-headline font-bold">Platform Schedule</h1>
-                    <p className="text-muted-foreground">Manage the master schedule for all courses.</p>
+                    <p className="text-muted-foreground">Manage the master recurring schedule for all courses.</p>
                 </div>
                 <CreateLectureDialog onLectureCreated={fetchLectures} />
             </div>
@@ -117,7 +124,7 @@ export default function AdminSchedulePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Scheduled Lectures</CardTitle>
-                    <CardDescription>A list of all upcoming and past lectures.</CardDescription>
+                    <CardDescription>A list of all recurring weekly lectures.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -129,8 +136,7 @@ export default function AdminSchedulePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Course</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Time</TableHead>
+                                    <TableHead>Schedule</TableHead>
                                     <TableHead>Location</TableHead>
                                     <TableHead>
                                         <span className="sr-only">Actions</span>
@@ -141,8 +147,7 @@ export default function AdminSchedulePage() {
                                 {lectures.map((lecture) => (
                                     <TableRow key={lecture.id}>
                                         <TableCell className="font-medium">{lecture.courseName}</TableCell>
-                                        <TableCell>{format(lecture.startTime.toDate(), 'PPP')}</TableCell>
-                                        <TableCell>{formatTimeRange(lecture.startTime, lecture.endTime)}</TableCell>
+                                        <TableCell>{formatSchedule(lecture.schedule)}</TableCell>
                                         <TableCell>{lecture.location}</TableCell>
                                         <TableCell>
                                             <DropdownMenu>
@@ -183,7 +188,7 @@ export default function AdminSchedulePage() {
                     <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will permanently delete the lecture for "{lectureToDelete?.courseName}". This action cannot be undone.
+                        This will permanently delete the recurring lecture schedule for "{lectureToDelete?.courseName}". This action cannot be undone.
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
