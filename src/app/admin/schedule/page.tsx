@@ -29,6 +29,7 @@ export interface Lecture {
     courseId: string;
     courseName: string;
     startTime: Timestamp;
+    endTime?: Timestamp;
     location: string;
     lecturerId: string;
 }
@@ -94,6 +95,15 @@ export default function AdminSchedulePage() {
         }
     };
 
+    const formatTimeRange = (start: Timestamp, end?: Timestamp) => {
+        const startTime = format(start.toDate(), 'p');
+        if (!end) {
+            return startTime;
+        }
+        const endTime = format(end.toDate(), 'p');
+        return `${startTime} - ${endTime}`;
+    }
+
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between">
@@ -119,7 +129,8 @@ export default function AdminSchedulePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Course</TableHead>
-                                    <TableHead>Date & Time</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Time</TableHead>
                                     <TableHead>Location</TableHead>
                                     <TableHead>
                                         <span className="sr-only">Actions</span>
@@ -130,7 +141,8 @@ export default function AdminSchedulePage() {
                                 {lectures.map((lecture) => (
                                     <TableRow key={lecture.id}>
                                         <TableCell className="font-medium">{lecture.courseName}</TableCell>
-                                        <TableCell>{format(lecture.startTime.toDate(), 'PPP p')}</TableCell>
+                                        <TableCell>{format(lecture.startTime.toDate(), 'PPP')}</TableCell>
+                                        <TableCell>{formatTimeRange(lecture.startTime, lecture.endTime)}</TableCell>
                                         <TableCell>{lecture.location}</TableCell>
                                         <TableCell>
                                             <DropdownMenu>

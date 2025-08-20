@@ -31,7 +31,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from "firebase/firestore";
@@ -51,8 +51,12 @@ import type { Course } from "../../courses/page";
 const lectureSchema = z.object({
   courseId: z.string().min(1, "Please select a course."),
   date: z.date({ required_error: "A date is required." }),
-  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
   location: z.string().min(1, "Location is required (e.g., 'Room 101' or 'Online')."),
+}).refine(data => data.endTime > data.startTime, {
+    message: "End time must be after start time.",
+    path: ["endTime"],
 });
 
 export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: () => void }) {
@@ -65,7 +69,8 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
     resolver: zodResolver(lectureSchema),
     defaultValues: {
       courseId: "",
-      time: "09:00",
+      startTime: "09:00",
+      endTime: "11:00",
       location: "",
     }
   });
@@ -99,14 +104,19 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
     }
 
     try {
-      const [hours, minutes] = values.time.split(':').map(Number);
+      const [startHours, startMinutes] = values.startTime.split(':').map(Number);
       const startTime = new Date(values.date);
-      startTime.setHours(hours, minutes);
+      startTime.setHours(startHours, startMinutes, 0, 0);
+
+      const [endHours, endMinutes] = values.endTime.split(':').map(Number);
+      const endTime = new Date(values.date);
+      endTime.setHours(endHours, endMinutes, 0, 0);
       
       await addDoc(collection(db, "lectures"), {
         courseId: values.courseId,
         courseName: `${selectedCourse.title} (${selectedCourse.code})`,
         startTime: Timestamp.fromDate(startTime),
+        endTime: Timestamp.fromDate(endTime),
         location: values.location,
         lecturerId: selectedCourse.lecturerId, // Assign lecture to the course's lecturer
         createdAt: serverTimestamp(),
@@ -171,48 +181,61 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                  <FormLabel>Date</FormLabel>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                      <FormControl>
+                          <Button
+                          variant={"outline"}
+                          className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                          )}
+                          >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                      </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                      />
+                      </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                 control={form.control}
-                name="date"
+                name="startTime"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
+                    <FormItem>
+                    <FormLabel>Start Time</FormLabel>
+                    <FormControl>
+                        <Input type="time" {...field} />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
                 />
-
-                <FormField
+                 <FormField
                 control={form.control}
-                name="time"
+                name="endTime"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Time</FormLabel>
+                    <FormLabel>End Time</FormLabel>
                     <FormControl>
                         <Input type="time" {...field} />
                     </FormControl>

@@ -49,8 +49,12 @@ import type { Lecture } from "../page";
 const lectureSchema = z.object({
   courseId: z.string().min(1, "Please select a course."),
   date: z.date({ required_error: "A date is required." }),
-  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
   location: z.string().min(1, "Location is required (e.g., 'Room 101' or 'Online')."),
+}).refine(data => data.endTime > data.startTime, {
+    message: "End time must be after start time.",
+    path: ["endTime"],
 });
 
 interface EditLectureDialogProps {
@@ -87,11 +91,13 @@ export function EditLectureDialog({ lecture, isOpen, onOpenChange, onLectureUpda
         fetchCourses();
     }
     if (lecture) {
-        const startTime = lecture.startTime.toDate();
+        const startTimeDate = lecture.startTime.toDate();
+        const endTimeDate = lecture.endTime ? lecture.endTime.toDate() : startTimeDate;
         form.reset({
             courseId: lecture.courseId,
-            date: startTime,
-            time: format(startTime, "HH:mm"),
+            date: startTimeDate,
+            startTime: format(startTimeDate, "HH:mm"),
+            endTime: format(endTimeDate, "HH:mm"),
             location: lecture.location,
         });
     }
@@ -109,15 +115,20 @@ export function EditLectureDialog({ lecture, isOpen, onOpenChange, onLectureUpda
     }
 
     try {
-      const [hours, minutes] = values.time.split(':').map(Number);
+      const [startHours, startMinutes] = values.startTime.split(':').map(Number);
       const newStartTime = new Date(values.date);
-      newStartTime.setHours(hours, minutes, 0, 0);
+      newStartTime.setHours(startHours, startMinutes, 0, 0);
+
+      const [endHours, endMinutes] = values.endTime.split(':').map(Number);
+      const newEndTime = new Date(values.date);
+      newEndTime.setHours(endHours, endMinutes, 0, 0);
 
       const lectureRef = doc(db, "lectures", lecture.id);
       await updateDoc(lectureRef, {
         courseId: values.courseId,
         courseName: `${selectedCourse.title} (${selectedCourse.code})`,
         startTime: Timestamp.fromDate(newStartTime),
+        endTime: Timestamp.fromDate(newEndTime),
         location: values.location,
         lecturerId: selectedCourse.lecturerId,
       });
@@ -174,48 +185,61 @@ export function EditLectureDialog({ lecture, isOpen, onOpenChange, onLectureUpda
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                  <FormLabel>Date</FormLabel>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                      <FormControl>
+                          <Button
+                          variant={"outline"}
+                          className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                          )}
+                          >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                      </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                      />
+                      </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                 control={form.control}
-                name="date"
+                name="startTime"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
+                    <FormItem>
+                    <FormLabel>Start Time</FormLabel>
+                    <FormControl>
+                        <Input type="time" {...field} />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
                 />
-
-                <FormField
+                 <FormField
                 control={form.control}
-                name="time"
+                name="endTime"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Time</FormLabel>
+                    <FormLabel>End Time</FormLabel>
                     <FormControl>
                         <Input type="time" {...field} />
                     </FormControl>
