@@ -7,7 +7,6 @@ import {
   BookOpen,
   ClipboardCheck,
   HelpCircle,
-  GraduationCap,
   Calendar,
   UserCircle,
   Loader2,
@@ -46,7 +45,6 @@ const navItems = [
   { href: "/student/courses", icon: BookOpen, label: "My Courses", tooltip: "My Courses" },
   { href: "/student/assignments", icon: ClipboardCheck, label: "Assignments", tooltip: "Assignments" },
   { href: "/student/quizzes", icon: HelpCircle, label: "Quizzes", tooltip: "Quizzes" },
-  { href: "/student/grades", icon: GraduationCap, label: "Grades", tooltip: "Grades" },
   { href: "/student/schedule", icon: Calendar, label: "Schedule", tooltip: "Schedule" },
 ];
 
