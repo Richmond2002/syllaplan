@@ -17,6 +17,7 @@ import { app } from "@/lib/firebase/client";
 import { useRouter } from "next/navigation";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useState } from "react";
 
 import {
   SidebarProvider,
@@ -27,6 +28,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -57,6 +59,7 @@ export default function LecturerLayout({
   const auth = getAuth(app);
   const { toast } = useToast();
   const { loading } = useAuthGuard();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   useSessionTimeout();
 
   const handleLogout = async () => {
@@ -76,13 +79,39 @@ export default function LecturerLayout({
       </div>
     );
   }
+  
+  const handleLinkClick = () => {
+    setIsSheetOpen(false);
+  };
 
   return (
     <SidebarProvider>
       <div className="flex h-screen flex-col">
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <SidebarTrigger />
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+              <SidebarTrigger />
+              <SheetContent side="left" className="p-0 pt-12 w-64">
+                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                  <Sidebar>
+                      <SidebarContent onClick={handleLinkClick}>
+                          <SidebarMenu>
+                              {navItems.map((item) => (
+                              <SidebarMenuItem key={item.href}>
+                                  <SidebarMenuButton tooltip={item.tooltip} asChild>
+                                  <Link href={item.href}>
+                                      <item.icon />
+                                      <span>{item.label}</span>
+                                  </Link>
+                                  </SidebarMenuButton>
+                              </SidebarMenuItem>
+                              ))}
+                          </SidebarMenu>
+                      </SidebarContent>
+                  </Sidebar>
+              </SheetContent>
+            </Sheet>
+
             <Link href="/" className="flex items-center gap-2 font-bold">
               <svg
                 className="size-6 text-primary"

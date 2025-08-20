@@ -9,7 +9,7 @@ import { PanelLeft } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { SheetTrigger } from "@/components/ui/sheet"
 import {
   Tooltip,
   TooltipContent,
@@ -87,36 +87,17 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, isOpen, setIsOpen } = useSidebar();
+    const { isMobile } = useSidebar();
 
+    // The mobile sidebar is now a Sheet in the layout, not here.
     if (isMobile) {
-        return (
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetContent side="left" className="p-0 pt-12 w-64">
-                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                    <div
-                        data-sidebar="sidebar"
-                        className={cn(
-                            "group flex h-full flex-col bg-sidebar text-sidebar-foreground",
-                        )}
-                    >
-                        {React.Children.map(children, (child) => {
-                          if (React.isValidElement(child)) {
-                            return React.cloneElement(child, {
-                              // @ts-ignore
-                              onClick: (e: React.MouseEvent<HTMLElement>) => {
-                                if (e.target instanceof HTMLAnchorElement && e.target.href) {
-                                  setIsOpen(false);
-                                }
-                              }
-                            });
-                          }
-                          return child;
-                        })}
-                    </div>
-                </SheetContent>
-            </Sheet>
-        );
+      // In mobile view, the sidebar content is rendered inside a Sheet in the layout.
+      // So the <aside> is not needed, but we need its content.
+      return (
+        <div data-sidebar="sidebar" className={cn("group flex h-full flex-col bg-sidebar text-sidebar-foreground", className)}>
+          {children}
+        </div>
+      );
     }
 
 
@@ -263,7 +244,7 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >((props, ref) => {
-    const { isMobile, setIsOpen } = useSidebar();
+    const { isMobile } = useSidebar();
     if (!isMobile) return null;
     return (
         <SheetTrigger asChild>
