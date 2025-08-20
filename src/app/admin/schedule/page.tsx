@@ -1,80 +1,99 @@
 
 "use client";
 
-import { useState, useEffect, useCallback }from 'react';
-import { Calendar } from "@/components/ui/calendar";
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MoreHorizontal, Loader2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
-import { getFirestore, collection, getDocs, query, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
-import { Loader2 } from 'lucide-react';
 import { CreateLectureDialog } from './_components/create-lecture-dialog';
+import { EditLectureDialog } from './_components/edit-lecture-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
-interface ScheduleEvent {
+export interface Lecture {
     id: string;
-    date: Date;
-    type: 'assignment' | 'lecture';
-    title: string;
-    course: string;
-    location?: string;
+    topic: string;
+    courseId: string;
+    courseName: string;
+    startTime: Timestamp;
+    location: string;
+    lecturerId: string;
 }
 
 export default function AdminSchedulePage() {
-    const [date, setDate] = useState<Date | undefined>(new Date());
-    const [events, setEvents] = useState<ScheduleEvent[]>([]);
+    const [lectures, setLectures] = useState<Lecture[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const [lectureToDelete, setLectureToDelete] = useState<Lecture | null>(null);
+    
     const db = getFirestore(app);
+    const { toast } = useToast();
 
-    const fetchScheduleData = useCallback(async () => {
+    const fetchLectures = useCallback(async () => {
         setIsLoading(true);
         try {
-            // Fetch assignments
-            const assignmentsQuery = query(collection(db, "assignments"));
-            const assignmentsSnapshot = await getDocs(assignmentsQuery);
-            const assignmentsData = assignmentsSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    date: (data.dueDate as Timestamp).toDate(),
-                    type: 'assignment' as const,
-                    title: `Due: ${data.title}`,
-                    course: data.course,
-                };
-            });
-
-            // Fetch lectures
-            const lecturesQuery = query(collection(db, "lectures"));
-            const lecturesSnapshot = await getDocs(lecturesQuery);
-            const lecturesData = lecturesSnapshot.docs.map(doc => {
-                 const data = doc.data();
-                 return {
-                    id: doc.id,
-                    date: (data.startTime as Timestamp).toDate(),
-                    type: 'lecture' as const,
-                    title: data.topic,
-                    course: data.courseName,
-                    location: data.location,
-                 }
-            });
-
-            setEvents([...assignmentsData, ...lecturesData]);
+            const q = query(collection(db, "lectures"), orderBy("startTime", "asc"));
+            const querySnapshot = await getDocs(q);
+            const lecturesData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as Lecture[];
+            setLectures(lecturesData);
         } catch (error) {
-            console.error("Error fetching schedule:", error);
+            console.error("Error fetching lectures:", error);
+            toast({ title: "Error", description: "Failed to fetch schedule.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
-    }, [db]);
+    }, [db, toast]);
 
     useEffect(() => {
-        fetchScheduleData();
-    }, [fetchScheduleData]);
+        fetchLectures();
+    }, [fetchLectures]);
 
-    const eventsForSelectedDate = date 
-        ? events.filter(event => format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')).sort((a,b) => a.date.getTime() - b.date.getTime())
-        : [];
-    
-    const eventDates = events.map(e => e.date);
+    const handleEdit = (lecture: Lecture) => {
+        setSelectedLecture(lecture);
+        setIsEditDialogOpen(true);
+    };
+
+    const openDeleteAlert = (lecture: Lecture) => {
+        setLectureToDelete(lecture);
+        setIsAlertOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!lectureToDelete) return;
+        try {
+            await deleteDoc(doc(db, "lectures", lectureToDelete.id));
+            toast({
+                title: "Success",
+                description: `Lecture "${lectureToDelete.topic}" has been deleted.`,
+            });
+            fetchLectures(); // Refresh the list
+        } catch (error) {
+            console.error("Error deleting lecture:", error);
+            toast({ title: "Error", description: "Failed to delete lecture.", variant: "destructive" });
+        } finally {
+            setIsAlertOpen(false);
+            setLectureToDelete(null);
+        }
+    };
 
     return (
         <div className="space-y-8">
@@ -83,76 +102,87 @@ export default function AdminSchedulePage() {
                     <h1 className="text-3xl font-headline font-bold">Platform Schedule</h1>
                     <p className="text-muted-foreground">Manage the master schedule for all courses.</p>
                 </div>
-                <CreateLectureDialog onLectureCreated={fetchScheduleData} />
+                <CreateLectureDialog onLectureCreated={fetchLectures} />
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-1 flex justify-center items-center">
-                   {isLoading ? (
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                   ) : (
-                    <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        className="p-0"
-                        modifiers={{
-                            events: eventDates
-                        }}
-                        modifiersStyles={{
-                           events: {
-                                color: 'hsl(var(--primary-foreground))',
-                                backgroundColor: 'hsl(var(--primary))',
-                           }
-                        }}
-                    />
-                   )}
-                </Card>
-                <Card className="lg:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="font-headline text-2xl">
-                            Events for {date ? format(date, 'PPP') : '...'}
-                        </CardTitle>
-                        <CardDescription>
-                            {eventsForSelectedDate.length > 0 
-                                ? `${eventsForSelectedDate.length} event(s) scheduled across all courses.`
-                                : 'No events scheduled for this day.'}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? (
-                             <div className="flex items-center justify-center h-48">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            </div>
-                        ) : eventsForSelectedDate.length > 0 ? (
-                            <ul className="space-y-4">
-                                {eventsForSelectedDate.map((event) => (
-                                    <li key={event.id} className="flex items-start space-x-4 p-3 rounded-lg bg-muted/50">
-                                        <div className="font-semibold text-lg text-primary">{format(event.date, 'p')}</div>
-                                        <div className="flex-grow">
-                                            <div className="flex justify-between items-center">
-                                                <p className="font-semibold">{event.title}</p>
-                                                <Badge 
-                                                    variant={event.type === 'lecture' ? 'default' : 'secondary'}
-                                                >
-                                                    {event.type}
-                                                </Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{event.course}</p>
-                                            {event.location && <p className="text-sm text-muted-foreground">Location: {event.location}</p>}
-                                        </div>
-                                    </li>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Scheduled Lectures</CardTitle>
+                    <CardDescription>A list of all upcoming and past lectures.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-64">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Course</TableHead>
+                                    <TableHead>Topic</TableHead>
+                                    <TableHead>Date & Time</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>
+                                        <span className="sr-only">Actions</span>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {lectures.map((lecture) => (
+                                    <TableRow key={lecture.id}>
+                                        <TableCell className="font-medium">{lecture.courseName}</TableCell>
+                                        <TableCell>{lecture.topic}</TableCell>
+                                        <TableCell>{format(lecture.startTime.toDate(), 'PPP p')}</TableCell>
+                                        <TableCell>{lecture.location}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Toggle menu</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleEdit(lecture)}>Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        className="text-destructive"
+                                                        onClick={() => openDeleteAlert(lecture)}
+                                                    >
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                            </ul>
-                        ) : (
-                             <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-                                <div className="text-center text-muted-foreground">
-                                    <p>Select a date to see event details.</p>
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            <EditLectureDialog
+                isOpen={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                lecture={selectedLecture}
+                onLectureUpdated={fetchLectures}
+            />
+
+            <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the lecture "{lectureToDelete?.topic}". This action cannot be undone.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Confirm Deletion</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
