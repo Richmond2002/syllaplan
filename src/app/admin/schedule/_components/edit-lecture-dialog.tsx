@@ -47,7 +47,6 @@ import type { Course } from "../../courses/page";
 import type { Lecture } from "../page";
 
 const lectureSchema = z.object({
-  topic: z.string().min(1, "Topic is required."),
   courseId: z.string().min(1, "Please select a course."),
   date: z.date({ required_error: "A date is required." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
@@ -90,7 +89,6 @@ export function EditLectureDialog({ lecture, isOpen, onOpenChange, onLectureUpda
     if (lecture) {
         const startTime = lecture.startTime.toDate();
         form.reset({
-            topic: lecture.topic,
             courseId: lecture.courseId,
             date: startTime,
             time: format(startTime, "HH:mm"),
@@ -117,7 +115,6 @@ export function EditLectureDialog({ lecture, isOpen, onOpenChange, onLectureUpda
 
       const lectureRef = doc(db, "lectures", lecture.id);
       await updateDoc(lectureRef, {
-        topic: values.topic,
         courseId: values.courseId,
         courseName: `${selectedCourse.title} (${selectedCourse.code})`,
         startTime: Timestamp.fromDate(newStartTime),
@@ -154,20 +151,6 @@ export function EditLectureDialog({ lecture, isOpen, onOpenChange, onLectureUpda
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-             <FormField
-              control={form.control}
-              name="topic"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lecture Topic</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
             <FormField
               control={form.control}
               name="courseId"

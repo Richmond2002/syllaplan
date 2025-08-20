@@ -49,7 +49,6 @@ import {
 import type { Course } from "../../courses/page";
 
 const lectureSchema = z.object({
-  topic: z.string().min(1, "Topic is required."),
   courseId: z.string().min(1, "Please select a course."),
   date: z.date({ required_error: "A date is required." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)."),
@@ -65,7 +64,6 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
   const form = useForm<z.infer<typeof lectureSchema>>({
     resolver: zodResolver(lectureSchema),
     defaultValues: {
-      topic: "",
       courseId: "",
       time: "09:00",
       location: "",
@@ -106,7 +104,6 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
       startTime.setHours(hours, minutes);
       
       await addDoc(collection(db, "lectures"), {
-        topic: values.topic,
         courseId: values.courseId,
         courseName: `${selectedCourse.title} (${selectedCourse.code})`,
         startTime: Timestamp.fromDate(startTime),
@@ -151,20 +148,6 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="topic"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lecture Topic</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Introduction to Kinematics" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
             <FormField
               control={form.control}
               name="courseId"

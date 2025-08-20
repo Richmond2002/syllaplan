@@ -26,7 +26,6 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface Lecture {
     id: string;
-    topic: string;
     courseId: string;
     courseName: string;
     startTime: Timestamp;
@@ -83,7 +82,7 @@ export default function AdminSchedulePage() {
             await deleteDoc(doc(db, "lectures", lectureToDelete.id));
             toast({
                 title: "Success",
-                description: `Lecture "${lectureToDelete.topic}" has been deleted.`,
+                description: `Lecture for "${lectureToDelete.courseName}" has been deleted.`,
             });
             fetchLectures(); // Refresh the list
         } catch (error) {
@@ -120,7 +119,6 @@ export default function AdminSchedulePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Course</TableHead>
-                                    <TableHead>Topic</TableHead>
                                     <TableHead>Date & Time</TableHead>
                                     <TableHead>Location</TableHead>
                                     <TableHead>
@@ -132,7 +130,6 @@ export default function AdminSchedulePage() {
                                 {lectures.map((lecture) => (
                                     <TableRow key={lecture.id}>
                                         <TableCell className="font-medium">{lecture.courseName}</TableCell>
-                                        <TableCell>{lecture.topic}</TableCell>
                                         <TableCell>{format(lecture.startTime.toDate(), 'PPP p')}</TableCell>
                                         <TableCell>{lecture.location}</TableCell>
                                         <TableCell>
@@ -174,7 +171,7 @@ export default function AdminSchedulePage() {
                     <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will permanently delete the lecture "{lectureToDelete?.topic}". This action cannot be undone.
+                        This will permanently delete the lecture for "{lectureToDelete?.courseName}". This action cannot be undone.
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
