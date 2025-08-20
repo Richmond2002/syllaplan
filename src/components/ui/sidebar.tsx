@@ -19,6 +19,8 @@ import {
 
 type SidebarContext = {
   isMobile: boolean
+  isOpen: boolean
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const SidebarContext = React.createContext<SidebarContext | null>(null)
@@ -45,12 +47,15 @@ const SidebarProvider = React.forwardRef<
     ref
   ) => {
     const isMobile = useIsMobile()
+    const [isOpen, setIsOpen] = React.useState(false)
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
-        isMobile
+        isMobile,
+        isOpen,
+        setIsOpen,
       }),
-      [isMobile]
+      [isMobile, isOpen]
     )
 
     return (
@@ -82,8 +87,7 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile } = useSidebar();
-    const [isOpen, setIsOpen] = React.useState(false);
+    const { isMobile, isOpen, setIsOpen } = useSidebar();
 
     if (isMobile) {
         return (
@@ -258,15 +262,19 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >((props, ref) => {
-    const { isMobile } = useSidebar();
+    const { isMobile, setIsOpen } = useSidebar();
     if (!isMobile) return null;
     return (
-        <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" ref={ref} {...props}>
-                <PanelLeft />
-                <span className="sr-only">Toggle Menu</span>
-            </Button>
-        </SheetTrigger>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          ref={ref} 
+          onClick={() => setIsOpen(true)}
+          {...props}
+        >
+            <PanelLeft />
+            <span className="sr-only">Toggle Menu</span>
+        </Button>
     )
 });
 SidebarTrigger.displayName = "SidebarTrigger"
