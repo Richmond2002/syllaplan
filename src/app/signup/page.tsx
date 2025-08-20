@@ -135,7 +135,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full flex items-center justify-center">
+      <div>
       <div className="text-center mb-8">
         <div className="flex justify-center mb-6">
           <div className="p-3 bg-gradient-to-br from-primary to-accent rounded-2xl shadow-lg">
@@ -145,7 +146,6 @@ export default function SignupPage() {
         <h1 className="text-3xl font-bold text-foreground mb-2">Create Your Account</h1>
         <p className="text-muted-foreground">Join CourseForge to get started</p>
       </div>
-
       <div className="bg-card shadow-xl rounded-2xl border">
         <div className="p-8">
           <Tabs defaultValue="student" value={role} onValueChange={setRole} className="w-full">
@@ -221,6 +221,8 @@ export default function SignupPage() {
             </div>
         </div>
       </div>
+      </div>
+
     </div>
   );
 }

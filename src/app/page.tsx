@@ -37,7 +37,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 pt-14">
+      <main className="flex-1 pt-14 pl-4">
         <section className="py-20 md:py-32">
           <div className="container text-center">
             <h1 className="font-headline text-4xl md:text-6xl font-bold text-primary tracking-tight">

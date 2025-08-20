@@ -119,9 +119,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="text-center mb-8">
-        <div className="flex justify-center mb-6">
+    <div className="w-full flex items-center justify-center">
+      <div className="">
+      <div className="bg-card shadow-xl rounded-2xl border">
+        <div className="p-8">
+          <div className="text-center mb-8">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
           <div className="p-3 bg-gradient-to-br from-primary to-accent rounded-2xl shadow-lg">
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
@@ -129,10 +133,6 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-foreground mb-2">Welcome Back</h1>
         <p className="text-muted-foreground">Sign in to access your account</p>
       </div>
-
-      <div className="bg-card shadow-xl rounded-2xl border">
-        <div className="p-8">
-          <div className="text-center mb-8">
             <h2 className="text-2xl font-semibold text-foreground mb-2">
               Sign In
             </h2>
@@ -235,6 +235,8 @@ export default function LoginPage() {
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>
+    </div>
+
     </div>
   );
 }
