@@ -10,7 +10,8 @@ import {
   GraduationCap,
   Calendar,
   UserCircle,
-  Loader2
+  Loader2,
+  PanelLeft,
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
@@ -26,9 +27,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -49,6 +49,24 @@ const navItems = [
   { href: "/student/grades", icon: GraduationCap, label: "Grades", tooltip: "Grades" },
   { href: "/student/schedule", icon: Calendar, label: "Schedule", tooltip: "Schedule" },
 ];
+
+const StudentNavMenu = ({ onClick }: { onClick?: () => void }) => (
+  <SidebarContent onClick={onClick}>
+    <SidebarMenu>
+      {navItems.map((item) => (
+        <SidebarMenuItem key={item.href}>
+          <SidebarMenuButton tooltip={item.tooltip} asChild>
+            <Link href={item.href}>
+              <item.icon />
+              <span>{item.label}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  </SidebarContent>
+);
+
 
 export default function StudentLayout({
   children,
@@ -89,26 +107,18 @@ export default function StudentLayout({
       <div className="flex h-screen flex-col">
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SidebarTrigger />
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <PanelLeft />
+                  <span className="sr-only">Toggle Menu</span>
+                </Button>
+              </SheetTrigger>
               <SheetContent side="left" className="p-0 pt-12 w-64">
-                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                  <Sidebar>
-                      <SidebarContent onClick={handleLinkClick}>
-                          <SidebarMenu>
-                              {navItems.map((item) => (
-                              <SidebarMenuItem key={item.href}>
-                                  <SidebarMenuButton tooltip={item.tooltip} asChild>
-                                  <Link href={item.href}>
-                                      <item.icon />
-                                      <span>{item.label}</span>
-                                  </Link>
-                                  </SidebarMenuButton>
-                              </SidebarMenuItem>
-                              ))}
-                          </SidebarMenu>
-                      </SidebarContent>
-                  </Sidebar>
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                <Sidebar>
+                  <StudentNavMenu onClick={handleLinkClick} />
+                </Sidebar>
               </SheetContent>
             </Sheet>
             <Link href="/" className="flex items-center gap-2 font-bold">
@@ -152,7 +162,9 @@ export default function StudentLayout({
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar className="hidden md:flex" />
+          <Sidebar className="hidden md:flex">
+            <StudentNavMenu />
+          </Sidebar>
           <div className="flex flex-1 flex-col overflow-y-auto">
             <main className="flex-1 p-6">{children}</main>
           </div>

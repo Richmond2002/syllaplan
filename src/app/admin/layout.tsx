@@ -10,6 +10,7 @@ import {
   UserCircle,
   Loader2,
   Calendar,
+  PanelLeft,
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
@@ -25,9 +26,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -48,6 +48,23 @@ const navItems = [
   { href: "/admin/settings", icon: Settings, label: "Settings", tooltip: "Settings" },
 ];
 
+const AdminNavMenu = ({ onClick }: { onClick?: () => void }) => (
+  <SidebarContent onClick={onClick}>
+    <SidebarMenu>
+      {navItems.map((item) => (
+        <SidebarMenuItem key={item.href}>
+          <SidebarMenuButton tooltip={item.tooltip} asChild>
+            <Link href={item.href}>
+              <item.icon />
+              <span className="text-sm">{item.label}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  </SidebarContent>
+);
+
 export default function AdminLayout({
   children,
 }: {
@@ -65,52 +82,7 @@ export default function AdminLayout({
       await signOut(auth);
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
       router.push("/login");
-    } catch (error: any) {
-      toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  const handleLinkClick = () => {
-    setIsSheetOpen(false);
-  };
-
-  return (
-    <SidebarProvider>
-      <div className="flex h-screen flex-col">
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SidebarTrigger />
-                <SheetContent side="left" className="p-0 pt-12 w-64">
-                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                    <Sidebar>
-                        <SidebarContent onClick={handleLinkClick}>
-                            <SidebarMenu>
-                                {navItems.map((item) => (
-                                <SidebarMenuItem key={item.href}>
-                                    <SidebarMenuButton tooltip={item.tooltip} asChild>
-                                    <Link href={item.href}>
-                                        <item.icon />
-                                        <span className="text-sm">{item.label}</span>
-                                    </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarContent>
-                    </Sidebar>
-                </SheetContent>
-            </Sheet>
-
-            <Link href="/" className="flex items-center gap-2 font-bold">
+    } catch (error: any)      <Link href="/" className="flex items-center gap-2 font-bold">
                <svg
                 className="size-6 text-primary"
                 xmlns="http://www.w3.org/2000/svg"
@@ -147,7 +119,9 @@ export default function AdminLayout({
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar className="hidden md:flex" />
+          <Sidebar className="hidden md:flex">
+             <AdminNavMenu />
+          </Sidebar>
           <div className="flex flex-1 flex-col overflow-y-auto">
             <main className="flex-1 p-6">{children}</main>
           </div>

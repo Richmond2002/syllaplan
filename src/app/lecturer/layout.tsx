@@ -10,7 +10,8 @@ import {
   ClipboardList,
   BookCopy,
   UserCircle,
-  Loader2
+  Loader2,
+  PanelLeft,
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
@@ -26,9 +27,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -49,6 +49,23 @@ const navItems = [
   { href: "/lecturer/schedule", icon: Calendar, label: "Schedule", tooltip: "Schedule" },
   { href: "/lecturer/assignments", icon: ClipboardList, label: "Assignments", tooltip: "Assignments" },
 ];
+
+const LecturerNavMenu = ({ onClick }: { onClick?: () => void }) => (
+  <SidebarContent onClick={onClick}>
+    <SidebarMenu>
+      {navItems.map((item) => (
+        <SidebarMenuItem key={item.href}>
+          <SidebarMenuButton tooltip={item.tooltip} asChild>
+            <Link href={item.href}>
+              <item.icon />
+              <span>{item.label}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  </SidebarContent>
+);
 
 export default function LecturerLayout({
   children,
@@ -90,28 +107,19 @@ export default function LecturerLayout({
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SidebarTrigger />
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <PanelLeft />
+                  <span className="sr-only">Toggle Menu</span>
+                </Button>
+              </SheetTrigger>
               <SheetContent side="left" className="p-0 pt-12 w-64">
-                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                  <Sidebar>
-                      <SidebarContent onClick={handleLinkClick}>
-                          <SidebarMenu>
-                              {navItems.map((item) => (
-                              <SidebarMenuItem key={item.href}>
-                                  <SidebarMenuButton tooltip={item.tooltip} asChild>
-                                  <Link href={item.href}>
-                                      <item.icon />
-                                      <span>{item.label}</span>
-                                  </Link>
-                                  </SidebarMenuButton>
-                              </SidebarMenuItem>
-                              ))}
-                          </SidebarMenu>
-                      </SidebarContent>
-                  </Sidebar>
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                <Sidebar>
+                  <LecturerNavMenu onClick={handleLinkClick} />
+                </Sidebar>
               </SheetContent>
             </Sheet>
-
             <Link href="/" className="flex items-center gap-2 font-bold">
               <svg
                 className="size-6 text-primary"
@@ -153,7 +161,9 @@ export default function LecturerLayout({
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar className="hidden md:flex" />
+          <Sidebar className="hidden md:flex">
+            <LecturerNavMenu />
+          </Sidebar>
           <div className="flex flex-1 flex-col overflow-y-auto">
             <main className="flex-1 p-6">{children}</main>
           </div>
