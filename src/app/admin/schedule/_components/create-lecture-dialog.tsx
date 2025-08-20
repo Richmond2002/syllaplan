@@ -186,7 +186,7 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
               name="date"
               render={({ field }) => (
                   <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>Day</FormLabel>
                   <Popover>
                       <PopoverTrigger asChild>
                       <FormControl>
@@ -198,7 +198,7 @@ export function CreateLectureDialog({ onLectureCreated }: { onLectureCreated: ()
                           )}
                           >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          {field.value ? format(field.value, "PPP") : <span>Pick a day</span>}
                           </Button>
                       </FormControl>
                       </PopoverTrigger>
