@@ -147,22 +147,7 @@ export default function AdminLayout({
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar>
-            <SidebarContent>
-              <SidebarMenu>
-                {navItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton tooltip={item.tooltip} asChild>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span className="text-sm">{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarContent>
-          </Sidebar>
+          <Sidebar className="hidden md:flex" />
           <div className="flex flex-1 flex-col overflow-y-auto">
             <main className="flex-1 p-6">{children}</main>
           </div>

@@ -16,6 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { usePathname } from "next/navigation"
 
 type SidebarContext = {
   isMobile: boolean
@@ -87,26 +88,12 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile } = useSidebar();
-
-    // The mobile sidebar is now a Sheet in the layout, not here.
-    if (isMobile) {
-      // In mobile view, the sidebar content is rendered inside a Sheet in the layout.
-      // So the <aside> is not needed, but we need its content.
-      return (
-        <div data-sidebar="sidebar" className={cn("group flex h-full flex-col bg-sidebar text-sidebar-foreground", className)}>
-          {children}
-        </div>
-      );
-    }
-
-
     return (
       <aside
         ref={ref}
         data-sidebar="sidebar"
         className={cn(
-            "group hidden h-full flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] md:flex w-64",
+            "group flex h-full flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] w-64",
             className
         )}
         {...props}
@@ -188,14 +175,12 @@ const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & {
     asChild?: boolean
-    isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
       asChild = false,
-      isActive = false,
       variant = "default",
       size = "default",
       tooltip,
@@ -206,6 +191,9 @@ const SidebarMenuButton = React.forwardRef<
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
+    const pathname = usePathname();
+    const href = (props as any).href; // A bit of a hack to get href if it exists
+    const isActive = href && pathname === href;
 
     const button = (
       <Comp
@@ -244,14 +232,13 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >((props, ref) => {
-    const { isMobile } = useSidebar();
-    if (!isMobile) return null;
     return (
         <SheetTrigger asChild>
           <Button 
             variant="ghost" 
             size="icon" 
             ref={ref} 
+            className="md:hidden"
             {...props}
           >
               <PanelLeft />
