@@ -82,7 +82,43 @@ export default function AdminLayout({
       await signOut(auth);
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
       router.push("/login");
-    } catch (error: any)      <Link href="/" className="flex items-center gap-2 font-bold">
+    } catch (error: any) {
+      toast({ title: "Logout Failed", description: error.message, variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const handleLinkClick = () => {
+    setIsSheetOpen(false);
+  };
+
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen flex-col">
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-background/50 px-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <PanelLeft />
+                  <span className="sr-only">Toggle Menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 pt-12 w-64">
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                <Sidebar>
+                  <AdminNavMenu onClick={handleLinkClick} />
+                </Sidebar>
+              </SheetContent>
+            </Sheet>
+            <Link href="/" className="flex items-center gap-2 font-bold">
                <svg
                 className="size-6 text-primary"
                 xmlns="http://www.w3.org/2000/svg"
