@@ -38,7 +38,7 @@ export default function Home() {
       </header>
 
       <main className="flex-1 pt-14 pl-1.5">
-        <section className="py-20 md:py-32">
+        <section className="w-full py-20 md:py-32">
           <div className="container text-center">
             <h1 className="font-headline text-4xl md:text-6xl font-bold text-primary tracking-tight">
               Craft Brilliance, Teach with Ease
@@ -54,7 +54,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 bg-muted/50">
+        <section className="w-full py-20 bg-muted/50">
           <div className="container">
             <div className="text-center mb-12">
               <h2 className="font-headline text-3xl font-bold">How CourseForge Empowers You</h2>
@@ -80,7 +80,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20">
+        <section className="w-full py-20">
           <div className="container grid md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="font-headline text-3xl font-bold">Focus on Teaching, Not Tedium</h2>
@@ -88,19 +88,6 @@ export default function Home() {
                 CourseForge automates the repetitive administrative tasks of course creation, freeing you up to do what you do best: inspire students.
                 From structuring content to setting deadlines, our intelligent tools provide a solid foundation, so you can focus on delivering exceptional learning experiences.
               </p>
-              <Button asChild className="mt-6">
-                <Link href="/lecturer">Explore the Lecturer Dashboard</Link>
-              </Button>
-            </div>
-            <div>
-              <Image
-                src="https://placehold.co/600x400.png"
-                alt="A lecturer working on a laptop"
-                width={600}
-                height={400}
-                className="rounded-lg shadow-lg"
-                data-ai-hint="lecturer laptop"
-              />
             </div>
           </div>
         </section>
