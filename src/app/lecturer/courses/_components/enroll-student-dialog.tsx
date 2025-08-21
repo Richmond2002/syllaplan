@@ -29,9 +29,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   getFirestore,
   collection,
@@ -42,12 +42,12 @@ import {
   doc,
   increment,
   serverTimestamp,
-  Timestamp,
 } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import type { Course } from "../page";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { calculateStudentLevel } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EnrollStudentDialogProps {
   course: Course | null;
@@ -61,8 +61,107 @@ interface Student {
   uid: string;
   name: string;
   indexNumber: string;
+  program: string;
   level: number;
 }
+
+function SearchResultsModal({ 
+    isOpen, 
+    onOpenChange, 
+    students, 
+    onEnroll,
+    isEnrolling 
+}: { 
+    isOpen: boolean, 
+    onOpenChange: (open: boolean) => void, 
+    students: Student[], 
+    onEnroll: (selectedStudents: Student[]) => void,
+    isEnrolling: boolean
+}) {
+    const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
+
+    const handleSelectStudent = (student: Student, checked: boolean) => {
+        if (checked) {
+            setSelectedStudents(prev => [...prev, student]);
+        } else {
+            setSelectedStudents(prev => prev.filter(s => s.uid !== student.uid));
+        }
+    };
+    
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedStudents(students);
+        } else {
+            setSelectedStudents([]);
+        }
+    }
+    
+    const isAllSelected = useMemo(() => students.length > 0 && selectedStudents.length === students.length, [students, selectedStudents]);
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-3xl h-auto md:h-[70vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle className="font-headline">
+                        Search Results – Found {students.length} Student(s)
+                    </DialogTitle>
+                    <DialogDescription>
+                        Select the students you wish to enroll and click the enroll button.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex-grow min-h-0">
+                    <ScrollArea className="h-full">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-12">
+                                        <Checkbox
+                                            checked={isAllSelected}
+                                            onCheckedChange={handleSelectAll}
+                                        />
+                                    </TableHead>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Index Number</TableHead>
+                                    <TableHead>Program</TableHead>
+                                    <TableHead>Level</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {students.map(student => (
+                                    <TableRow key={student.uid}>
+                                        <TableCell>
+                                            <Checkbox 
+                                                checked={selectedStudents.some(s => s.uid === student.uid)}
+                                                onCheckedChange={(checked) => handleSelectStudent(student, !!checked)}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-medium">{student.name}</TableCell>
+                                        <TableCell>{student.indexNumber}</TableCell>
+                                        <TableCell>{student.program}</TableCell>
+                                        <TableCell>{student.level}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button 
+                        onClick={() => onEnroll(selectedStudents)}
+                        disabled={selectedStudents.length === 0 || isEnrolling}
+                    >
+                        {isEnrolling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Enroll {selectedStudents.length} Selected
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 
 export function EnrollStudentDialog({
   course,
@@ -81,6 +180,7 @@ export function EnrollStudentDialog({
     level: "",
   });
   const [searchResults, setSearchResults] = useState<Student[]>([]);
+  const [isResultsModalOpen, setIsResultsModalOpen] = useState(false);
 
   const fetchEnrolledStudents = useCallback(async () => {
     if (!course) return;
@@ -158,7 +258,7 @@ export function EnrollStudentDialog({
           ({
             id: doc.id,
             ...doc.data(),
-          } as Omit<Student, 'level'>)
+          } as Omit<Student, 'level' | 'program'> & { program?: string })
       );
       
       const enrolledStudentUids = new Set(enrolledStudents.map((s) => s.uid));
@@ -169,7 +269,14 @@ export function EnrollStudentDialog({
         newStudents = newStudents.filter(student => calculateStudentLevel(student.indexNumber) === targetLevel);
       }
 
-      setSearchResults(newStudents.map(s => ({...s, level: calculateStudentLevel(s.indexNumber)})));
+      const formattedStudents = newStudents.map(s => ({
+          ...s, 
+          program: s.program || s.indexNumber.split('/')[1],
+          level: calculateStudentLevel(s.indexNumber)
+      })) as Student[];
+
+      setSearchResults(formattedStudents);
+      setIsResultsModalOpen(true);
 
       if (newStudents.length === 0) {
         toast({
@@ -189,13 +296,13 @@ export function EnrollStudentDialog({
     }
   };
 
-  const handleEnroll = async () => {
-    if (!course || searchResults.length === 0) return;
+  const handleEnroll = async (studentsToEnroll: Student[]) => {
+    if (!course || studentsToEnroll.length === 0) return;
     setIsLoading(true);
     try {
       const batch = writeBatch(db);
       
-      searchResults.forEach((student) => {
+      studentsToEnroll.forEach((student) => {
         const enrollmentRef = doc(collection(db, `courses/${course.id}/enrolledStudents`));
         batch.set(enrollmentRef, {
             uid: student.uid,
@@ -206,15 +313,17 @@ export function EnrollStudentDialog({
       });
 
       const courseRef = doc(db, "courses", course.id);
-      batch.update(courseRef, { students: increment(searchResults.length) });
+      batch.update(courseRef, { students: increment(studentsToEnroll.length) });
 
       await batch.commit();
       toast({
         title: "Success",
-        description: `${searchResults.length} student(s) enrolled successfully.`,
+        description: `${studentsToEnroll.length} student(s) enrolled successfully.`,
       });
+      // Close results modal and refresh main list
+      setIsResultsModalOpen(false);
+      fetchEnrolledStudents(); 
       onEnrollmentUpdated();
-      onOpenChange(false);
     } catch (error) {
         console.error("Error enrolling students:", error);
         toast({ title: "Error", description: "Failed to enroll students.", variant: "destructive" });
@@ -224,8 +333,9 @@ export function EnrollStudentDialog({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-auto md:h-[80vh] flex flex-col">
+      <DialogContent className="max-w-4xl h-auto md:h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-headline">
             Enroll Students in {course?.title}
@@ -236,7 +346,7 @@ export function EnrollStudentDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow min-h-0">
-          {/* Left Side: Search & Results */}
+          {/* Left Side: Search Form */}
           <div className="flex flex-col gap-4">
             <form
               onSubmit={handleSearch}
@@ -299,42 +409,6 @@ export function EnrollStudentDialog({
                 Search Students
               </Button>
             </form>
-
-            <div className="border rounded-lg flex-grow flex flex-col min-h-0">
-              <div className="p-4 border-b">
-                <h3 className="font-semibold">Search Results</h3>
-                <p className="text-sm text-muted-foreground">Found {searchResults.length} new student(s).</p>
-              </div>
-              <ScrollArea className="flex-grow">
-                <div className="p-4">
-                    {searchResults.length > 0 ? (
-                        <ul className="space-y-2">
-                           {searchResults.map(student => (
-                            <li key={student.uid} className="flex justify-between items-center text-sm p-2 bg-muted/50 rounded-md">
-                                <div>
-                                    <p className="font-medium">{student.name}</p>
-                                    <p className="text-muted-foreground">{student.indexNumber}</p>
-                                </div>
-                                <Badge variant="secondary">Level {student.level}</Badge>
-                            </li>
-                           ))}
-                        </ul>
-                    ) : (
-                         <div className="text-center text-muted-foreground p-8">
-                            <p>Search results will appear here.</p>
-                        </div>
-                    )}
-                </div>
-              </ScrollArea>
-              {searchResults.length > 0 && (
-                <div className="p-4 border-t">
-                    <Button onClick={handleEnroll} className="w-full" disabled={isLoading}>
-                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Enroll {searchResults.length} Student(s)
-                    </Button>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Right Side: Enrolled Students */}
@@ -384,7 +458,14 @@ export function EnrollStudentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <SearchResultsModal
+        isOpen={isResultsModalOpen}
+        onOpenChange={setIsResultsModalOpen}
+        students={searchResults}
+        onEnroll={handleEnroll}
+        isEnrolling={isLoading}
+    />
+    </>
   );
 }
-
-    
