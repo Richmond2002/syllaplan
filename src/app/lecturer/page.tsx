@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useState, useEffect, useCallback } from "react";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, collection, query, where, getDocs, Timestamp, orderBy, limit } from "firebase/firestore";
 import { app } from "@/lib/firebase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -67,7 +67,6 @@ const generateUpcomingLectures = (lectures: RecurringLecture[]): LectureInstance
 
 
 export default function LecturerDashboardPage() {
-  const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState("Lecturer");
   const [stats, setStats] = useState({ courses: 0, assignmentsToGrade: 0 });
   const [upcomingLectures, setUpcomingLectures] = useState<LectureInstance[]>([]);
@@ -76,59 +75,57 @@ export default function LecturerDashboardPage() {
   const auth = getAuth(app);
   const db = getFirestore(app);
 
+  const fetchLecturerData = useCallback(async (user: User) => {
+    setIsLoading(true);
+    try {
+      // Fetch courses
+      const coursesQuery = query(collection(db, "courses"), where("lecturerId", "==", user.uid));
+      const coursesSnapshot = await getDocs(coursesQuery);
+      const courseCount = coursesSnapshot.size;
+      
+      // Fetch assignments needing grading (mock for now)
+      const assignmentsToGradeCount = 0;
+
+      // Fetch recurring lectures and generate upcoming instances
+      const lecturesQuery = query(
+        collection(db, "lectures"),
+        where("lecturerId", "==", user.uid)
+      );
+      const lecturesSnapshot = await getDocs(lecturesQuery);
+      const recurringLectures = lecturesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as RecurringLecture[];
+
+      const allUpcoming = generateUpcomingLectures(recurringLectures);
+      setUpcomingLectures(allUpcoming.slice(0, 2));
+
+      setStats({
+        courses: courseCount,
+        assignmentsToGrade: assignmentsToGradeCount,
+      });
+
+    } catch (error) {
+      console.error("Error fetching lecturer data: ", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [db]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        setUser(currentUser);
         const fullName = currentUser.displayName || "Lecturer";
         const firstName = fullName.split(" ")[0];
         setUserName(firstName);
-
-        // Fetch lecturer specific data
-        setIsLoading(true);
-        try {
-          // Fetch courses
-          const coursesQuery = query(collection(db, "courses"), where("lecturerId", "==", currentUser.uid));
-          const coursesSnapshot = await getDocs(coursesQuery);
-          const courseCount = coursesSnapshot.size;
-          
-          // Fetch assignments needing grading (mock for now, as submissions aren't built)
-          const assignmentsToGradeCount = 0; // Replace with real query later
-
-          // Fetch recurring lectures and generate upcoming instances
-          const lecturesQuery = query(
-            collection(db, "lectures"),
-            where("lecturerId", "==", currentUser.uid)
-          );
-          const lecturesSnapshot = await getDocs(lecturesQuery);
-          const recurringLectures = lecturesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as RecurringLecture[];
-
-          const allUpcoming = generateUpcomingLectures(recurringLectures);
-          setUpcomingLectures(allUpcoming.slice(0, 2));
-
-
-          setStats({
-            courses: courseCount,
-            assignmentsToGrade: assignmentsToGradeCount,
-          });
-
-        } catch (error) {
-          console.error("Error fetching lecturer data: ", error);
-        } finally {
-          setIsLoading(false);
-        }
-
+        await fetchLecturerData(currentUser);
       } else {
-        setUser(null);
         setUserName("Lecturer");
         setIsLoading(false);
       }
     });
     return () => unsubscribe();
-  }, [auth, db]);
+  }, [auth, fetchLecturerData]);
 
   return (
     <div className="space-y-8">

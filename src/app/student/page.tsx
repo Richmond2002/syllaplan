@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useState, useEffect, useCallback } from "react";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { getFirestore, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,62 +30,64 @@ export default function StudentDashboardPage() {
   const auth = getAuth(app);
   const db = getFirestore(app);
 
+  const fetchStudentData = useCallback(async (user: User) => {
+    setIsLoading(true);
+    try {
+        // Get enrolled course IDs
+        const enrolledCourseIds: string[] = [];
+        const coursesSnapshot = await getDocs(collection(db, "courses"));
+        for (const courseDoc of coursesSnapshot.docs) {
+            const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", user.uid));
+            const enrollmentSnapshot = await getDocs(enrollmentQuery);
+            if (!enrollmentSnapshot.empty) {
+                enrolledCourseIds.push(courseDoc.id);
+            }
+        }
+
+        let deadlines: UpcomingDeadline[] = [];
+        if (enrolledCourseIds.length > 0) {
+            const assignmentsQuery = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
+            const assignmentsSnapshot = await getDocs(assignmentsQuery);
+            deadlines = assignmentsSnapshot.docs
+                .map(doc => {
+                    const data = doc.data();
+                    const dueDate = data.dueDate.toDate();
+                    return {
+                        id: doc.id,
+                        title: data.title,
+                        course: data.course,
+                        due: formatDistanceToNow(dueDate, { addSuffix: true }),
+                        dueDate: dueDate,
+                    };
+                })
+                .filter(d => d.dueDate > new Date()) // Only show upcoming deadlines
+                .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()); // Sort by soonest
+        }
+        
+        // In a real app, recent grades would be another query
+        const recentGradesCount = 0;
+
+        setStats({
+            courses: enrolledCourseIds.length,
+            deadlines: deadlines.length,
+            grades: recentGradesCount,
+        });
+        setUpcomingDeadlines(deadlines.slice(0, 3)); // Show top 3
+
+    } catch (error) {
+        console.error("Error fetching student dashboard data: ", error);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [db]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const fullName = user.displayName || "Student";
         const firstName = fullName.split(" ")[0];
         setUserName(firstName);
-
-        setIsLoading(true);
-        try {
-            // Get enrolled course IDs
-            const enrolledCourseIds: string[] = [];
-            const coursesSnapshot = await getDocs(collection(db, "courses"));
-            for (const courseDoc of coursesSnapshot.docs) {
-                const enrollmentQuery = query(collection(db, `courses/${courseDoc.id}/enrolledStudents`), where("uid", "==", user.uid));
-                const enrollmentSnapshot = await getDocs(enrollmentQuery);
-                if (!enrollmentSnapshot.empty) {
-                    enrolledCourseIds.push(courseDoc.id);
-                }
-            }
-
-            let deadlines: UpcomingDeadline[] = [];
-            if (enrolledCourseIds.length > 0) {
-                const assignmentsQuery = query(collection(db, "assignments"), where("courseId", "in", enrolledCourseIds));
-                const assignmentsSnapshot = await getDocs(assignmentsQuery);
-                deadlines = assignmentsSnapshot.docs
-                    .map(doc => {
-                        const data = doc.data();
-                        const dueDate = data.dueDate.toDate();
-                        return {
-                            id: doc.id,
-                            title: data.title,
-                            course: data.course,
-                            due: formatDistanceToNow(dueDate, { addSuffix: true }),
-                            dueDate: dueDate,
-                        };
-                    })
-                    .filter(d => d.dueDate > new Date()) // Only show upcoming deadlines
-                    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()); // Sort by soonest
-            }
-            
-            // In a real app, recent grades would be another query
-            const recentGradesCount = 0;
-
-            setStats({
-                courses: enrolledCourseIds.length,
-                deadlines: deadlines.length,
-                grades: recentGradesCount,
-            });
-            setUpcomingDeadlines(deadlines.slice(0, 3)); // Show top 3
-
-        } catch (error) {
-            console.error("Error fetching student dashboard data: ", error);
-        } finally {
-            setIsLoading(false);
-        }
-
+        await fetchStudentData(user);
       } else {
         setIsLoading(false);
         setUserName("Student");
@@ -94,7 +96,7 @@ export default function StudentDashboardPage() {
       }
     });
     return () => unsubscribe();
-  }, [auth, db]);
+  }, [auth, fetchStudentData]);
 
   return (
     <div className="space-y-8">
