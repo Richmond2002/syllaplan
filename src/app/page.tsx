@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="fixed top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="w-full fixed top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
           <Link href="/" className="flex items-center gap-2 font-bold">
             <svg
@@ -48,7 +48,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
-                <Link href="/signup">Get Started for Free <ArrowRight className="ml-2" /></Link>
+                <Link href="/signup">Get Started<ArrowRight className="ml-2" /></Link>
               </Button>
             </div>
           </div>
@@ -81,10 +81,12 @@ export default function Home() {
         </section>
 
         <section className="w-full py-20">
-          <div className="container grid md:grid-cols-2 gap-12 items-center">
+          <div className="container flex flex-col items-center justify-center gap-4 p-6">
             <div>
-              <h2 className="font-headline text-3xl font-bold">Focus on Teaching, Not Tedium</h2>
-              <p className="mt-4 text-muted-foreground">
+              <h2 className=" font-headline text-3xl font-bold">Focus on Teaching, Not Tedium</h2>
+            </div>
+            <div>
+              <p className="mt-4 text-lg md:text-xl text-foreground/80 max-w-2xl mx-auto">
                 CourseForge automates the repetitive administrative tasks of course creation, freeing you up to do what you do best: inspire students.
                 From structuring content to setting deadlines, our intelligent tools provide a solid foundation, so you can focus on delivering exceptional learning experiences.
               </p>
