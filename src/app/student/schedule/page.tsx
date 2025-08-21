@@ -11,18 +11,6 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import { Loader2 } from 'lucide-react';
 
-interface ScheduleEntry {
-    day: string; // "Monday", "Tuesday", etc.
-    startTime: string; // "HH:mm"
-    endTime: string; // "HH:mm"
-}
-
-interface RecurringLecture {
-    id: string;
-    courseName: string;
-    location: string;
-    schedule: ScheduleEntry[];
-}
 
 interface ScheduleEvent {
     id: string;
@@ -32,37 +20,6 @@ interface ScheduleEvent {
     course: string;
     location?: string;
 }
-
-const weekdaysMap: { [key: string]: number } = { "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6 };
-
-// Generates lecture instances for the next 4 weeks from a recurring schedule
-const generateLectureInstances = (lecture: RecurringLecture): ScheduleEvent[] => {
-    const instances: ScheduleEvent[] = [];
-    const today = new Date();
-    const fourWeeksFromNow = addDays(today, 28);
-
-    lecture.schedule.forEach(slot => {
-        const targetDay = weekdaysMap[slot.day];
-        let current = today;
-        current = addDays(current, (targetDay - getDay(current) + 7) % 7);
-        
-        while (current <= fourWeeksFromNow) {
-            const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
-            const lectureDate = setMinutes(setHours(current, startHours), startMinutes);
-
-            instances.push({
-                id: `${lecture.id}-${format(lectureDate, 'yyyy-MM-dd')}`,
-                date: lectureDate,
-                type: 'lecture',
-                title: lecture.courseName,
-                course: lecture.courseName,
-                location: lecture.location,
-            });
-            current = addDays(current, 7);
-        }
-    });
-    return instances;
-};
 
 
 export default function StudentSchedulePage() {
@@ -101,17 +58,7 @@ export default function StudentSchedulePage() {
                     };
                 });
                 
-                // Fetch recurring lectures for those courses
-                const lecturesQuery = query(collection(db, "lectures"), where("courseId", "in", enrolledCourseIds));
-                const lecturesSnapshot = await getDocs(lecturesQuery);
-                const recurringLectures = lecturesSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as RecurringLecture[];
-                
-                const lectureInstances = recurringLectures.flatMap(generateLectureInstances);
-
-                setEvents([...assignmentsData, ...lectureInstances]);
+                setEvents(assignmentsData);
             } else {
                 setEvents([]);
             }
@@ -145,7 +92,7 @@ export default function StudentSchedulePage() {
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-headline font-bold">My Schedule</h1>
-                <p className="text-muted-foreground">An overview of your lectures, deadlines, and exams.</p>
+                <p className="text-muted-foreground">An overview of your assignment deadlines.</p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1 flex justify-center items-center">
@@ -172,12 +119,12 @@ export default function StudentSchedulePage() {
                 <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl">
-                            Events for {date ? format(date, 'PPP') : '...'}
+                            Deadlines for {date ? format(date, 'PPP') : '...'}
                         </CardTitle>
                         <CardDescription>
                             {eventsForSelectedDate.length > 0 
-                                ? `You have ${eventsForSelectedDate.length} event(s) scheduled.`
-                                : 'No events scheduled for this day.'}
+                                ? `You have ${eventsForSelectedDate.length} deadline(s) scheduled.`
+                                : 'No deadlines scheduled for this day.'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -208,7 +155,7 @@ export default function StudentSchedulePage() {
                         ) : (
                              <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
                                 <div className="text-center text-muted-foreground">
-                                    <p>Select a date to see event details.</p>
+                                    <p>Select a date to see deadline details.</p>
                                 </div>
                             </div>
                         )}
